@@ -1,0 +1,10 @@
+[package]
+name = "mesos"
+version = "0.1.0"
+authors = ["Connor Doyle <connor@mesosphere.io>"]
+
+[dependencies]
+libc = "0.1"
+
+[dependencies.protobuf]
+git = "https://github.com/stepancheg/rust-protobuf.git"
