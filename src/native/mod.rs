@@ -1,9 +1,11 @@
 mod mesos_c;
 
+use libc::c_void;
 use proto;
 use scheduler::{Scheduler, SchedulerDriver};
 use std::ffi::CString;
 use std::option::Option;
+use std::ptr;
 
 pub struct MesosSchedulerDriver<'a> {
     scheduler: &'a Scheduler,
@@ -69,6 +71,8 @@ impl<'a> SchedulerDriver for MesosSchedulerDriver<'a> {
         let callbacks: *mut mesos_c::SchedulerCallBacks =
             &mut self.create_callbacks(self.scheduler);
 
+        let native_payload: *mut c_void = ptr::null_mut();
+
         let native_framework_info: *mut mesos_c::ProtobufObj =
             &mut mesos_c::ProtobufObj::default();
 
@@ -76,7 +80,7 @@ impl<'a> SchedulerDriver for MesosSchedulerDriver<'a> {
 
         let scheduler_ptr_pair = unsafe {
             mesos_c::scheduler_init(callbacks,
-                                    std::ptr::null, // payload
+                                    native_payload,
                                     native_framework_info,
                                     native_master.as_ptr() as *const i8)
         };

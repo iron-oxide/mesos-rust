@@ -54,14 +54,14 @@ class CScheduler : public Scheduler
 
     virtual void error(SchedulerDriver* driver, const string& message);
 
-    SchedulerCallbacks callbacks;
+    SchedulerCallBacks callbacks;
     void* payload;
     FrameworkInfo info;
 };
 
 
 SchedulerPtrPair scheduler_init(
-    SchedulerCallbacks* callbacks,
+    SchedulerCallBacks* callbacks,
     void* payload,
     ProtobufObj* framework,
     const char* master)

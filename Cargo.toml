@@ -2,6 +2,7 @@
 name = "mesos"
 version = "0.1.0"
 authors = ["Connor Doyle <connor@mesosphere.io>"]
+# links = "mesos"
 build = "build.rs"
 
 [build-dependencies]
