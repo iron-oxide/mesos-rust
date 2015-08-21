@@ -179,8 +179,7 @@ pub type SchedulerDriverStatus = ::libc::c_int;
 
 pub type ExecutorDriverStatus = ::libc::c_int;
 
-#[link(name = "libmesos")]
-#[allow(dead_code)]
+#[link(name = "mesos")]
 extern "C" {
     pub fn scheduler_launchTasks(
         driver: SchedulerDriverPtr,

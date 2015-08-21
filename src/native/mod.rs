@@ -14,7 +14,7 @@ pub struct MesosSchedulerDriver<'a> {
 
 impl<'a> MesosSchedulerDriver<'a> {
 
-    fn new(
+    pub fn new(
         scheduler: &Scheduler,
         frameworkInfo: proto::FrameworkInfo,
         master: String
