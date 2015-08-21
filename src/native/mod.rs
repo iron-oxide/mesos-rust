@@ -76,6 +76,7 @@ impl<'a> SchedulerDriver for MesosSchedulerDriver<'a> {
 
         let scheduler_ptr_pair = unsafe {
             mesos_c::scheduler_init(callbacks,
+                                    std::ptr::null, // payload
                                     native_framework_info,
                                     native_master.as_ptr() as *const i8)
         };
@@ -83,7 +84,6 @@ impl<'a> SchedulerDriver for MesosSchedulerDriver<'a> {
         self.native_ptr_pair = Some(scheduler_ptr_pair);
 
         return 0; // TODO(CD): this better!  e.g. actually start the driver
-
     }
 
 }

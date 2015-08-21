@@ -194,7 +194,7 @@ SchedulerDriverStatus scheduler_sendFrameworkMessage(
 
 SchedulerPtrPair scheduler_init(
     SchedulerCallBacks* callbacks, // Scheduler
-    // void* payload,              // ???
+    void* payload,                 // ???
     ProtobufObj* framework,        // FrameworkInfo
     const char* master);           // std::string& master
 

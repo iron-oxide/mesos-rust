@@ -227,6 +227,7 @@ extern "C" {
 
     pub fn scheduler_init(
         callbacks: *mut SchedulerCallBacks,
+        payload: *mut c_void,
         framework: *mut ProtobufObj,
         master: *const ::libc::c_char) -> SchedulerPtrPair;
 
