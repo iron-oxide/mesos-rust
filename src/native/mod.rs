@@ -1,4 +1,5 @@
 mod mesos_c;
+mod tests;
 
 use libc::c_void;
 use proto;
