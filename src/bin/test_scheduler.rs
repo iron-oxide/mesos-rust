@@ -7,27 +7,39 @@ use mesos::scheduler::{Scheduler, SchedulerDriver};
 use mesos::native::MesosSchedulerDriver;
 use mesos::proto;
 
+
 struct MyScheduler;
 
 impl Scheduler for MyScheduler {
     fn registered(
         &self,
         driver: &SchedulerDriver,
-        frameworkID: &proto::FrameworkID,
-        masterInfo: &proto::MasterInfo
+        framework_id: &proto::FrameworkID,
+        master_info: &proto::MasterInfo
     ) {
         println!("MyScheduler::registered");
+        println!("framework_id: {:?}", framework_id);
+        println!("master_info: {:?}", master_info);
     }
 }
 
 fn main() -> () {
     let scheduler = MyScheduler;
+
+    let mut framework_info = proto::FrameworkInfo::new();
+    framework_info.set_name("mesos-rust-test".to_string());
+    framework_info.set_user("root".to_string());
+
+    println!("framework_info: [{:?}]", framework_info);
+
     let mut driver = MesosSchedulerDriver::new(
         &scheduler,
-        proto::FrameworkInfo::new(),
+        framework_info,
         "localhost:5050".to_string(),
     );
+
     println!("Starting scheduler driver");
+
     driver.run();
 }
 

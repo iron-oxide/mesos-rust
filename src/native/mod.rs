@@ -2,6 +2,7 @@ mod mesos_c;
 
 use libc::c_void;
 use proto;
+use protobuf::core::Message;
 use scheduler::{Scheduler, SchedulerDriver};
 use std::ffi::CString;
 use std::option::Option;
@@ -9,7 +10,7 @@ use std::ptr;
 
 pub struct MesosSchedulerDriver<'a> {
     scheduler: &'a Scheduler,
-    frameworkInfo: proto::FrameworkInfo,
+    framework_info: proto::FrameworkInfo,
     master: String,
     native_ptr_pair: Option<mesos_c::SchedulerPtrPair>,
 }
@@ -18,12 +19,12 @@ impl<'a> MesosSchedulerDriver<'a> {
 
     pub fn new(
         scheduler: &Scheduler,
-        frameworkInfo: proto::FrameworkInfo,
+        framework_info: proto::FrameworkInfo,
         master: String
     ) -> MesosSchedulerDriver {
         MesosSchedulerDriver {
             scheduler: scheduler,
-            frameworkInfo: frameworkInfo,
+            framework_info: framework_info,
             master: master,
             native_ptr_pair: None,
         }
@@ -37,8 +38,8 @@ impl<'a> MesosSchedulerDriver<'a> {
 
         extern "C" fn wrapped_registered_callback(
             driver: mesos_c::SchedulerDriverPtr,
-            frameworkID: *mut mesos_c::ProtobufObj,
-            masterInfo: *mut mesos_c::ProtobufObj,
+            framework_id: *mut mesos_c::ProtobufObj,
+            master_info: *mut mesos_c::ProtobufObj,
         ) -> () {
             println!("wrapped_registered_callback");
             // marshal frameworkID
@@ -73,16 +74,16 @@ impl<'a> SchedulerDriver for MesosSchedulerDriver<'a> {
 
         let native_payload: *mut c_void = ptr::null_mut();
 
-        let native_framework_info: *mut mesos_c::ProtobufObj =
-            &mut mesos_c::ProtobufObj::default();
+        let native_framework_info =
+            &mut mesos_c::ProtobufObj::from_message(&self.framework_info);
 
         let native_master = CString::new(self.master.clone()).unwrap();
 
         let scheduler_ptr_pair = unsafe {
             mesos_c::scheduler_init(callbacks,
-                                    native_payload,
-                                    native_framework_info,
-                                    native_master.as_ptr() as *const i8)
+                native_payload,
+                native_framework_info as *mut mesos_c::ProtobufObj,
+                native_master.as_ptr() as *const i8)
         };
 
         self.native_ptr_pair = Some(scheduler_ptr_pair);

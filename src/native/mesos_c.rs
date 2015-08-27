@@ -1,5 +1,7 @@
 use libc::{c_void, size_t};
 use std::option::Option;
+use std::slice;
+use protobuf;
 
 #[repr(C)]
 #[derive(Copy)]
@@ -15,6 +17,26 @@ impl Clone for ProtobufObj {
 impl Default for ProtobufObj {
     fn default() -> Self { unsafe { ::std::mem::zeroed() } }
 }
+
+impl ProtobufObj {
+    pub fn from_message(message: &protobuf::Message) -> ProtobufObj {
+        let data = &mut vec![];
+        message.write_to_vec(data);
+        ProtobufObj {
+            data: data.as_ptr() as *mut c_void,
+            size: data.len() as size_t,
+        }
+    }
+
+    pub fn to_bytes(&self) -> &[u8] {
+        unsafe {
+            slice::from_raw_parts(
+                self.data as *const u8,
+                self.size as usize)
+        }
+    }
+}
+
 
 pub type SchedulerDriverPtr = *mut c_void;
 

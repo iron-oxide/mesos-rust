@@ -5,8 +5,8 @@ pub trait Scheduler {
     fn registered(
         &self,
         driver: &SchedulerDriver,
-        frameworkID: &proto::FrameworkID,
-        masterInfo: &proto::MasterInfo) -> ();
+        framework_id: &proto::FrameworkID,
+        master_info: &proto::MasterInfo) -> ();
 
 }
 
