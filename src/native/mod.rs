@@ -75,8 +75,13 @@ impl<'a> SchedulerDriver for MesosSchedulerDriver<'a> {
 
         let native_payload: *mut c_void = ptr::null_mut();
 
+        // lifetime of pb_data must exceed native_framework_info
+        let pb_data = &mut vec![];
+
         let native_framework_info =
-            &mut mesos_c::ProtobufObj::from_message(&self.framework_info);
+            &mut mesos_c::ProtobufObj::from_message(
+                &self.framework_info,
+                pb_data);
 
         let native_master = CString::new(self.master.clone()).unwrap();
 

@@ -19,8 +19,10 @@ impl Default for ProtobufObj {
 }
 
 impl ProtobufObj {
-    pub fn from_message(message: &protobuf::Message) -> ProtobufObj {
-        let data = &mut vec![];
+    pub fn from_message(
+        message: &protobuf::Message,
+        data: &mut Vec<u8>
+    ) -> ProtobufObj {
         message.write_to_vec(data);
         ProtobufObj {
             data: data.as_ptr() as *mut c_void,
