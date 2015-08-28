@@ -1,12 +1,9 @@
-/*
- * This file will not stick around, only here for smoke testing the linker.
- */
 extern crate mesos;
 
 use mesos::scheduler::{Scheduler, SchedulerDriver};
 use mesos::native::MesosSchedulerDriver;
 use mesos::proto;
-
+use std::thread;
 
 struct MyScheduler;
 
@@ -37,8 +34,6 @@ fn main() -> () {
         framework_info,
         "localhost:5050".to_string(),
     );
-
-    println!("Starting scheduler driver");
 
     driver.run();
 }

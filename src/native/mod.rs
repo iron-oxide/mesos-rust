@@ -94,7 +94,19 @@ impl<'a> SchedulerDriver for MesosSchedulerDriver<'a> {
 
         self.native_ptr_pair = Some(scheduler_ptr_pair);
 
-        return 0; // TODO(CD): this better!  e.g. actually start the driver
+        println!("Starting scheduler driver");
+        let scheduler_status = unsafe{
+            mesos_c::scheduler_start(scheduler_ptr_pair.driver)
+        };
+        println!("scheduler_status: [{}]", scheduler_status);
+
+        println!("Joining scheduler driver");
+        let scheduler_status = unsafe{
+            mesos_c::scheduler_join(scheduler_ptr_pair.driver)
+        };
+        println!("scheduler_status: [{}]", scheduler_status);
+
+        scheduler_status
     }
 
 }
