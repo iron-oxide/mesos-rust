@@ -14,7 +14,7 @@ _Note: this project is not ready to use for anything._
 Using [cargo](http://crates.io):
 
 ```
-$ cargo rustc --bin test_scheduler -- -lmesos -lprotobuf-lite
+$ cargo rustc --bin test_scheduler -- -l mesos -l protobuf-lite
 ```
 
 Take it for a test drive!
