@@ -381,7 +381,7 @@ void CScheduler::resourceOffers(
     encodedOffers.push_back("");
     std::string& encodedOffer = encodedOffers.back();
     ProtobufObj offerObj =
-      utils::serialize<const Offer>(offers[i], encodedOffers.back());
+      utils::serialize<const Offer>(offers[i], encodedOffer);
 
     offersObj.push_back(offerObj);
   }

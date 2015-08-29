@@ -1,7 +1,7 @@
 mod mesos_c;
 mod tests;
 
-use libc::c_void;
+use libc::{c_void, size_t};
 use proto;
 use protobuf::core::Message;
 use scheduler::{Scheduler, SchedulerDriver};
@@ -10,14 +10,13 @@ use std::mem;
 use std::ops::Deref;
 use std::option::Option;
 use std::ptr;
+use std::slice;
 use std::sync::RwLock;
 
+// HACK. A 128 bit type to hold Rust trait references.
 #[derive(Copy, Clone)]
 #[repr(C)]
-struct TraitPtr {
-    upper: u64,
-    lower: u64,
-}
+struct TraitPtr(u64, u64);
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -32,9 +31,11 @@ unsafe impl Send for SchedulerDriverPtr {}
 unsafe impl Sync for SchedulerDriverPtr {}
 
 lazy_static! {
-    // TODO(CD): Clean this up (using a lookup and synchronization barriers) to
-    // make it possible for a single process to activate multiple scheduler
-    // drivers simultaneously. HACK.
+    // HACK.
+    //
+    // TODO(CD): Clean this up (using a lookup and synchronization
+    // barriers) to make it possible for a single process to activate
+    // multiple scheduler drivers simultaneously.
     static ref SCHEDULER_PTR: RwLock<Option<SchedulerPtr>> =
         RwLock::new(None);
 
@@ -42,15 +43,33 @@ lazy_static! {
         RwLock::new(None);
 }
 
+fn delegate<L, T>(lambda: L) -> T
+    where L : Fn(&Scheduler, &SchedulerDriver) -> T {
+
+    let scheduler: &Scheduler = unsafe {
+        let SchedulerPtr(raw) =
+            SCHEDULER_PTR.read()
+                .unwrap()  // Unwrap lock acquisition result.
+                .unwrap(); // Unwrap option.
+        mem::transmute(raw)
+    };
+
+    let scheduler_driver: &MesosSchedulerDriver = unsafe {
+        let SchedulerDriverPtr(raw) =
+            SCHEDULER_DRIVER_PTR.read()
+                .unwrap()  // Unwrap lock acquisition result.
+                .unwrap(); // Unwrap option.
+        mem::transmute(raw)
+    };
+
+    lambda(scheduler, scheduler_driver)
+}
+
 pub struct MesosSchedulerDriver<'a> {
     scheduler: &'a Scheduler,
     framework_info: proto::FrameworkInfo,
     master: String,
     native_ptr_pair: Option<mesos_c::SchedulerPtrPair>,
-}
-
-struct WrappedScheduler<'a> {
-    scheduler: &'a Scheduler,
 }
 
 impl<'a> MesosSchedulerDriver<'a> {
@@ -68,78 +87,77 @@ impl<'a> MesosSchedulerDriver<'a> {
             native_ptr_pair: None,
         };
 
-        // Save pointers, to be used when constructing C funtions that
-        // delegate to the Scheduler implementation.
+        // Save pointers to be used when constructing C funtions that
+        // delegate to the Rust scheduler implementation.
         let mut sched_ptr = SCHEDULER_PTR.write().unwrap();
-        *sched_ptr = Some(
-            unsafe { mem::transmute(scheduler) }
-        );
+        *sched_ptr = Some(unsafe { mem::transmute(scheduler) });
 
         let mut driver_ptr = SCHEDULER_DRIVER_PTR.write().unwrap();
-        *driver_ptr = Some(
-            unsafe { mem::transmute(&driver) }
-        );
+        *driver_ptr = Some(unsafe { mem::transmute(&driver) });
 
         driver
     }
 
     fn create_callbacks(&self) -> mesos_c::SchedulerCallBacks {
-        println!("MesosSchedulerDriver::create_callbacks");
 
         extern "C" fn wrapped_registered_callback(
-            driver: mesos_c::SchedulerDriverPtr,
-            unsafe_framework_id: *mut mesos_c::ProtobufObj,
-            unsafe_master_info: *mut mesos_c::ProtobufObj,
+            _: mesos_c::SchedulerDriverPtr,
+            native_framework_id: *mut mesos_c::ProtobufObj,
+            native_master_info: *mut mesos_c::ProtobufObj
         ) -> () {
-            println!("wrapped_registered_callback");
+            let framework_id = &mut proto::FrameworkID::new();
+            mesos_c::ProtobufObj::merge(native_framework_id, framework_id);
 
-            // Convert unsafe pointers to references (unsafely)
-            let native_framework_id = unsafe {
-                let x: &mesos_c::ProtobufObj = &*unsafe_framework_id;
-                x
+            let master_info = &mut proto::MasterInfo::new();
+            mesos_c::ProtobufObj::merge(native_master_info, master_info);
+
+            delegate(|scheduler, driver| {
+                scheduler.registered(driver, &framework_id, &master_info);
+            });
+        }
+
+        extern "C" fn wrapped_reregistered_callback(
+            _: mesos_c::SchedulerDriverPtr,
+            native_master_info: *mut mesos_c::ProtobufObj
+        ) -> () {
+            let master_info = &mut proto::MasterInfo::new();
+            mesos_c::ProtobufObj::merge(native_master_info, master_info);
+
+            delegate(|scheduler, driver| {
+                scheduler.reregistered(driver, &master_info);
+            });
+        }
+
+        extern "C" fn wrapped_resource_offers_callback(
+            _: mesos_c::SchedulerDriverPtr,
+            native_offers: *mut mesos_c::ProtobufObj,
+            native_num_offers: size_t
+        ) -> () {
+            let num_offers = native_num_offers as usize;
+
+            let mut pbs = unsafe {
+                slice::from_raw_parts(
+                    native_offers as *const mesos_c::ProtobufObj,
+                    num_offers as usize).to_vec()
             };
 
-            let native_master_info = unsafe {
-                let x: &mesos_c::ProtobufObj = &*unsafe_master_info;
-                x
-            };
+            let mut offers = vec![];
 
-            // Unmarshal protobuf objects
-            let mut framework_id = proto::FrameworkID::new();
-            framework_id.merge_from_bytes(
-                native_framework_id.to_bytes())
-                .unwrap();
+            for mut pb in pbs {
+                let mut offer = proto::Offer::new();
+                mesos_c::ProtobufObj::merge(&mut pb, &mut offer);
+                offers.push(offer);
+            }
 
-            let mut master_info = proto::MasterInfo::new();
-            master_info.merge_from_bytes(
-                native_master_info.to_bytes()).unwrap();
-
-            println!("delegating to scheduler.registered...");
-
-            // Two unwrap() calls -- one for the lock acquisition,
-            // another for the option.
-            let scheduler: &Scheduler = unsafe {
-                let SchedulerPtr(raw) =
-                    SCHEDULER_PTR.read().unwrap().unwrap();
-                mem::transmute(raw)
-            };
-
-            let scheduler_driver: &MesosSchedulerDriver = unsafe {
-                let SchedulerDriverPtr(raw) =
-                    SCHEDULER_DRIVER_PTR.read().unwrap().unwrap();
-                mem::transmute(raw)
-            };
-
-            scheduler.registered(
-                scheduler_driver,
-                &framework_id,
-                &master_info);
+            delegate(|scheduler, driver| {
+                scheduler.resource_offers(driver, offers.clone());
+            });
         }
 
         mesos_c::SchedulerCallBacks {
             registeredCallBack: Some(wrapped_registered_callback),
-            reregisteredCallBack: None,
-            resourceOffersCallBack: None,
+            reregisteredCallBack: Some(wrapped_reregistered_callback),
+            resourceOffersCallBack: Some(wrapped_resource_offers_callback),
             statusUpdateCallBack: None,
             disconnectedCallBack: None,
             offerRescindedCallBack: None,

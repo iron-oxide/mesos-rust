@@ -3,7 +3,6 @@ extern crate mesos;
 use mesos::scheduler::{Scheduler, SchedulerDriver};
 use mesos::native::MesosSchedulerDriver;
 use mesos::proto;
-use std::thread;
 
 struct MyScheduler;
 
@@ -12,11 +11,32 @@ impl Scheduler for MyScheduler {
         &self,
         driver: &SchedulerDriver,
         framework_id: &proto::FrameworkID,
-        master_info: &proto::MasterInfo
-    ) {
+        master_info: &proto::MasterInfo) {
+
         println!("MyScheduler::registered");
         println!("framework_id: {:?}", framework_id);
         println!("master_info: {:?}", master_info);
+    }
+
+    fn reregistered(
+        &self,
+        driver: &SchedulerDriver,
+        master_info: &proto::MasterInfo) {
+
+        println!("MyScheduler::reregistered");
+        println!("master_info: {:?}", master_info);
+    }
+
+    fn resource_offers(
+        &self,
+        driver: &SchedulerDriver,
+        offers: Vec<proto::Offer>) {
+
+        println!("MyScheduler::resource_offers");
+        println!("Received [{}] offers", offers.len());
+        for offer in offers {
+            println!("  Offer id: [{:?}]", offer.get_id());
+        }
     }
 }
 

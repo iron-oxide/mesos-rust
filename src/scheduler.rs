@@ -8,6 +8,16 @@ pub trait Scheduler {
         framework_id: &proto::FrameworkID,
         master_info: &proto::MasterInfo) -> ();
 
+    fn reregistered(
+        &self,
+        driver: &SchedulerDriver,
+        master_info: &proto::MasterInfo) -> ();
+
+    fn resource_offers(
+        &self,
+        driver: &SchedulerDriver,
+        offers: Vec<proto::Offer>) -> ();
+
 }
 
 pub trait SchedulerDriver {

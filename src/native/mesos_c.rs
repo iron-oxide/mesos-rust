@@ -30,6 +30,17 @@ impl ProtobufObj {
         }
     }
 
+    pub fn from_raw_ptr(raw: *mut ProtobufObj) -> ProtobufObj {
+        unsafe { *raw }
+    }
+
+    pub fn merge(raw_ptr: *mut ProtobufObj, proto: &mut protobuf::Message) {
+        let native = ProtobufObj::from_raw_ptr(raw_ptr);
+        proto.merge_from_bytes(
+            native.to_bytes())
+            .unwrap();
+    }
+
     pub fn to_bytes(&self) -> &[u8] {
         unsafe {
             slice::from_raw_parts(
