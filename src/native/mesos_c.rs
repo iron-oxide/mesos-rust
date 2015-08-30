@@ -54,48 +54,48 @@ impl ProtobufObj {
 pub type SchedulerDriverPtr = *mut c_void;
 
 pub type scheduler_registeredCallBack_t =
-    Option<extern "C" fn(arg1: SchedulerDriverPtr,
+    Option<extern "C" fn(arg1: *const c_void,
                                         arg2: *mut ProtobufObj,
                                         arg3: *mut ProtobufObj) -> ()>;
 
 pub type scheduler_reregisteredCallBack_t =
-    Option<extern "C" fn(arg1: SchedulerDriverPtr,
+    Option<extern "C" fn(arg1: *const c_void,
                                         arg2: *mut ProtobufObj) -> ()>;
 
 pub type scheduler_resourceOffersCallBack_t =
-    Option<extern "C" fn(arg1: SchedulerDriverPtr,
+    Option<extern "C" fn(arg1: *const c_void,
                                         arg2: *mut ProtobufObj, arg3: size_t)
                               -> ()>;
 
 pub type scheduler_statusUpdateCallBack_t =
-    Option<extern "C" fn(arg1: SchedulerDriverPtr,
+    Option<extern "C" fn(arg1: *const c_void,
                                         arg2: *mut ProtobufObj) -> ()>;
 
 pub type scheduler_disconnectedCallBack_t =
-    Option<extern "C" fn(arg1: SchedulerDriverPtr) -> ()>;
+    Option<extern "C" fn(arg1: *const c_void) -> ()>;
 
 pub type scheduler_offerRescindedCallBack_t =
-    Option<extern "C" fn(arg1: SchedulerDriverPtr,
+    Option<extern "C" fn(arg1: *const c_void,
                                         arg2: *mut ProtobufObj) -> ()>;
 
 pub type scheduler_frameworkMessageCallBack_t =
-    Option<extern "C" fn(arg1: SchedulerDriverPtr,
+    Option<extern "C" fn(arg1: *const c_void,
                                         arg2: *mut ProtobufObj,
                                         arg3: *mut ProtobufObj,
                                         arg4: *const ::libc::c_char) -> ()>;
 
 pub type scheduler_slaveLostCallBack_t =
-    Option<extern "C" fn(arg1: SchedulerDriverPtr,
+    Option<extern "C" fn(arg1: *const c_void,
                                         arg2: *mut ProtobufObj) -> ()>;
 
 pub type scheduler_executorLostCallBack_t =
-    Option<extern "C" fn(arg1: SchedulerDriverPtr,
+    Option<extern "C" fn(arg1: *const c_void,
                                         arg2: *mut ProtobufObj,
                                         arg3: *mut ProtobufObj,
                                         arg4: ::libc::c_int) -> ()>;
 
 pub type scheduler_errorCallBack_t =
-    Option<extern "C" fn(arg1: SchedulerDriverPtr,
+    Option<extern "C" fn(arg1: *const c_void,
                                         arg2: *const ::libc::c_char) -> ()>;
 
 #[repr(C)]
@@ -261,8 +261,8 @@ extern "C" {
         data: *const ::libc::c_char) -> SchedulerDriverStatus;
 
     pub fn scheduler_init(
-        callbacks: *mut SchedulerCallBacks,
-        payload: *mut c_void,
+        callbacks: *const SchedulerCallBacks,
+        payload: *const c_void,
         framework: *mut ProtobufObj,
         master: *const ::libc::c_char) -> SchedulerPtrPair;
 
