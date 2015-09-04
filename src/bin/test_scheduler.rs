@@ -35,7 +35,7 @@ impl Scheduler for MyScheduler {
         println!("MyScheduler::resource_offers");
         println!("Received [{}] offers", offers.len());
         for offer in offers {
-            println!("  Offer id: [{:?}]", offer.get_id());
+            println!("  Offer: [{:?}]", offer);
         }
     }
 }

@@ -152,7 +152,7 @@ message FrameworkInfo {
       REVOCABLE_RESOURCES = 1;
     }
 
-    required Type type = 1;
+    required Type capability_type = 1;
   }
 
   // This field allows a framework to advertise its set of
@@ -402,7 +402,7 @@ message Value {
     required string value = 1;
   }
 
-  required Type type = 1;
+  required Type value_type = 1;
   optional Scalar scalar = 2;
   optional Ranges ranges = 3;
   optional Set set = 4;
@@ -417,7 +417,7 @@ message Value {
  */
 message Attribute {
   required string name = 1;
-  required Value.Type type = 2;
+  required Value.Type value_type = 2;
   optional Value.Scalar scalar = 3;
   optional Value.Ranges ranges = 4;
   optional Value.Set set = 6;
@@ -436,7 +436,7 @@ message Attribute {
  */
 message Resource {
   required string name = 1;
-  required Value.Type type = 2;
+  required Value.Type value_type = 2;
   optional Value.Scalar scalar = 3;
   optional Value.Ranges ranges = 4;
   optional Value.Set set = 5;
@@ -805,7 +805,7 @@ message Offer {
       repeated Resource volumes = 1;
     }
 
-    required Type type = 1;
+    required Type operation_type = 1;
     optional Launch launch = 2;
     optional Reserve reserve = 3;
     optional Unreserve unreserve = 4;
@@ -1023,7 +1023,7 @@ message ACL {
       ANY = 1;
       NONE = 2;
     }
-    optional Type type = 1 [default = SOME];
+    optional Type entity_type = 1 [default = SOME];
     repeated string values = 2; // Ignored for ANY/NONE.
   }
 
@@ -1195,7 +1195,7 @@ message ContainerInfo {
     optional bool force_pull_image = 6;
   }
 
-  required Type type = 1;
+  required Type container_type = 1;
   repeated Volume volumes = 2;
   optional string hostname = 4;
 
