@@ -378,8 +378,7 @@ void CScheduler::resourceOffers(
   vector<std::string> encodedOffers;
   vector<ProtobufObj> offersObj;
   for (size_t i = 0; i < offers.size(); i++) {
-    encodedOffers.push_back("");
-    std::string& encodedOffer = encodedOffers.back();
+    std::string encodedOffer;
     ProtobufObj offerObj =
       utils::serialize<const Offer>(offers[i], encodedOffer);
 
