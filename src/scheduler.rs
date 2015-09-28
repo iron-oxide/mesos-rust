@@ -5,8 +5,18 @@ pub trait Scheduler {
     fn registered(
         &self,
         driver: &SchedulerDriver,
-        frameworkID: &proto::FrameworkID,
-        masterInfo: &proto::MasterInfo) -> ();
+        framework_id: &proto::FrameworkID,
+        master_info: &proto::MasterInfo) -> ();
+
+    fn reregistered(
+        &self,
+        driver: &SchedulerDriver,
+        master_info: &proto::MasterInfo) -> ();
+
+    fn resource_offers(
+        &self,
+        driver: &SchedulerDriver,
+        offers: Vec<proto::Offer>) -> ();
 
 }
 

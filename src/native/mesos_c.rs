@@ -1,5 +1,7 @@
 use libc::{c_void, size_t};
 use std::option::Option;
+use std::slice;
+use protobuf;
 
 #[repr(C)]
 #[derive(Copy)]
@@ -15,6 +17,39 @@ impl Clone for ProtobufObj {
 impl Default for ProtobufObj {
     fn default() -> Self { unsafe { ::std::mem::zeroed() } }
 }
+
+impl ProtobufObj {
+    pub fn from_message(
+        message: &protobuf::Message,
+        data: &mut Vec<u8>
+    ) -> ProtobufObj {
+        message.write_to_vec(data);
+        ProtobufObj {
+            data: data.as_ptr() as *mut c_void,
+            size: data.len() as size_t,
+        }
+    }
+
+    pub fn from_raw_ptr(raw: *mut ProtobufObj) -> ProtobufObj {
+        unsafe { *raw }
+    }
+
+    pub fn merge(raw_ptr: *mut ProtobufObj, proto: &mut protobuf::Message) {
+        let native = ProtobufObj::from_raw_ptr(raw_ptr);
+        proto.merge_from_bytes(
+            native.to_bytes())
+            .unwrap();
+    }
+
+    pub fn to_bytes(&self) -> &[u8] {
+        unsafe {
+            slice::from_raw_parts(
+                self.data as *const u8,
+                self.size as usize)
+        }
+    }
+}
+
 
 pub type SchedulerDriverPtr = *mut c_void;
 
@@ -179,8 +214,7 @@ pub type SchedulerDriverStatus = ::libc::c_int;
 
 pub type ExecutorDriverStatus = ::libc::c_int;
 
-#[link(name = "libmesos")]
-#[allow(dead_code)]
+// #[link(name = "mesos")]
 extern "C" {
     pub fn scheduler_launchTasks(
         driver: SchedulerDriverPtr,
@@ -228,6 +262,7 @@ extern "C" {
 
     pub fn scheduler_init(
         callbacks: *mut SchedulerCallBacks,
+        payload: *mut c_void,
         framework: *mut ProtobufObj,
         master: *const ::libc::c_char) -> SchedulerPtrPair;
 

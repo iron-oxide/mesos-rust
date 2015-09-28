@@ -45,7 +45,7 @@ typedef void (*scheduler_frameworkMessageCallBack_t)(
     SchedulerDriverPtr,  // SchedulerDriver
     ProtobufObj*,        // ExecutorID
     ProtobufObj*,        // SlaveID
-    const char*);        // std::string& data
+    ProtobufObj*);       // data part is a C string
 
 typedef void (*scheduler_slaveLostCallBack_t)(
     SchedulerDriverPtr,  // SchedulerDriver
@@ -59,7 +59,7 @@ typedef void (*scheduler_executorLostCallBack_t)(
 
 typedef void (*scheduler_errorCallBack_t)(
     SchedulerDriverPtr,  // SchedulerDriver
-    const char*);        // std::string& message
+    ProtobufObj*);       // data part is a C string
 
 typedef struct {
   scheduler_registeredCallBack_t        registeredCallBack;
@@ -194,7 +194,7 @@ SchedulerDriverStatus scheduler_sendFrameworkMessage(
 
 SchedulerPtrPair scheduler_init(
     SchedulerCallBacks* callbacks, // Scheduler
-    // void* payload,              // ???
+    void* payload,                 // ???
     ProtobufObj* framework,        // FrameworkInfo
     const char* master);           // std::string& master
 
