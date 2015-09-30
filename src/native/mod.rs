@@ -1,13 +1,13 @@
+#![allow(dead_code)]
+
 mod mesos_c;
 mod tests;
 
 use libc::{c_void, size_t};
 use proto;
-use protobuf::core::Message;
 use scheduler::{Scheduler, SchedulerDriver};
 use std::ffi::CString;
 use std::mem;
-use std::ops::Deref;
 use std::option::Option;
 use std::ptr;
 use std::slice;
@@ -112,7 +112,7 @@ impl<'a> MesosSchedulerDriver<'a> {
             mesos_c::ProtobufObj::merge(native_master_info, master_info);
 
             delegate(|scheduler, driver| {
-                scheduler.registered(driver, &framework_id, &master_info);
+                scheduler.registered(driver, &framework_id, master_info);
             });
         }
 
@@ -124,7 +124,7 @@ impl<'a> MesosSchedulerDriver<'a> {
             mesos_c::ProtobufObj::merge(native_master_info, master_info);
 
             delegate(|scheduler, driver| {
-                scheduler.reregistered(driver, &master_info);
+                scheduler.reregistered(driver, master_info);
             });
         }
 
@@ -135,7 +135,7 @@ impl<'a> MesosSchedulerDriver<'a> {
         ) -> () {
             let num_offers = native_num_offers as usize;
 
-            let mut pbs = unsafe {
+            let pbs = unsafe {
                 slice::from_raw_parts(
                     native_offers as *const mesos_c::ProtobufObj,
                     num_offers as usize).to_vec()
@@ -154,16 +154,79 @@ impl<'a> MesosSchedulerDriver<'a> {
             });
         }
 
+        extern "C" fn wrapped_status_update_callback(
+            _: mesos_c::SchedulerDriverPtr,
+            native_task_status: *mut mesos_c::ProtobufObj
+        ) -> () {
+            let task_status = &mut proto::TaskStatus::new();
+            mesos_c::ProtobufObj::merge(native_task_status, task_status);
+
+            delegate(|scheduler, driver| {
+                scheduler.status_update(driver, task_status);
+            });
+        }
+
+        extern "C" fn wrapped_disconnected_callback(
+            _: mesos_c::SchedulerDriverPtr
+        ) -> () {
+            delegate(|scheduler, driver| {
+                scheduler.disconnected(driver);
+            });
+        }
+
+        extern "C" fn wrapped_offer_rescinded_callback(
+            _: mesos_c::SchedulerDriverPtr,
+            native_offer_id: *mut mesos_c::ProtobufObj
+        ) -> () {
+            let offer_id = &mut proto::OfferID::new();
+            mesos_c::ProtobufObj::merge(native_offer_id, offer_id);
+
+            delegate(|scheduler, driver| {
+                scheduler.offer_rescinded(driver, offer_id);
+            });
+        }
+
+        extern "C" fn wrapped_slave_lost_callback(
+            _: mesos_c::SchedulerDriverPtr,
+            native_slave_id: *mut mesos_c::ProtobufObj
+        ) -> () {
+            let slave_id = &mut proto::SlaveID::new();
+            mesos_c::ProtobufObj::merge(native_slave_id, slave_id);
+
+            delegate(|scheduler, driver| {
+                scheduler.slave_lost(driver, slave_id);
+            });
+        }
+
+        extern "C" fn wrapped_executor_lost_callback(
+            _: mesos_c::SchedulerDriverPtr,
+            native_executor_id: *mut mesos_c::ProtobufObj,
+            native_slave_id: *mut mesos_c::ProtobufObj,
+            native_status: ::libc::c_int
+        ) -> () {
+            let executor_id = &mut proto::ExecutorID::new();
+            mesos_c::ProtobufObj::merge(native_executor_id, executor_id);
+
+            let slave_id = &mut proto::SlaveID::new();
+            mesos_c::ProtobufObj::merge(native_slave_id, slave_id);
+
+            let status = native_status as i32;
+
+            delegate(|scheduler, driver| {
+                scheduler.executor_lost(driver, executor_id, slave_id, status);
+            });
+        }
+
         mesos_c::SchedulerCallBacks {
             registeredCallBack: Some(wrapped_registered_callback),
             reregisteredCallBack: Some(wrapped_reregistered_callback),
             resourceOffersCallBack: Some(wrapped_resource_offers_callback),
-            statusUpdateCallBack: None,
-            disconnectedCallBack: None,
-            offerRescindedCallBack: None,
+            statusUpdateCallBack: Some(wrapped_status_update_callback),
+            disconnectedCallBack: Some(wrapped_disconnected_callback),
+            offerRescindedCallBack: Some(wrapped_offer_rescinded_callback),
             frameworkMessageCallBack: None,
-            slaveLostCallBack: None,
-            executorLostCallBack: None,
+            slaveLostCallBack: Some(wrapped_slave_lost_callback),
+            executorLostCallBack: Some(wrapped_executor_lost_callback),
             errorCallBack: None,
         }
     }

@@ -4,12 +4,14 @@ use mesos::scheduler::{Scheduler, SchedulerDriver};
 use mesos::native::MesosSchedulerDriver;
 use mesos::proto;
 
+use std::process;
+
 struct MyScheduler;
 
 impl Scheduler for MyScheduler {
     fn registered(
         &self,
-        driver: &SchedulerDriver,
+        _: &SchedulerDriver,
         framework_id: &proto::FrameworkID,
         master_info: &proto::MasterInfo) {
 
@@ -20,7 +22,7 @@ impl Scheduler for MyScheduler {
 
     fn reregistered(
         &self,
-        driver: &SchedulerDriver,
+        _: &SchedulerDriver,
         master_info: &proto::MasterInfo) {
 
         println!("MyScheduler::reregistered");
@@ -29,7 +31,7 @@ impl Scheduler for MyScheduler {
 
     fn resource_offers(
         &self,
-        driver: &SchedulerDriver,
+        _: &SchedulerDriver,
         offers: Vec<proto::Offer>) {
 
         println!("MyScheduler::resource_offers");
@@ -37,6 +39,55 @@ impl Scheduler for MyScheduler {
         for offer in offers {
             println!("  Offer: [{:?}]", offer);
         }
+    }
+
+    fn status_update(
+        &self,
+        _: &SchedulerDriver,
+        task_status: &proto::TaskStatus) {
+
+        println!("MyScheduler::status_update");
+        println!("task_status: {:?}", task_status);
+    }
+
+    fn disconnected(
+        &self,
+        _: &SchedulerDriver) {
+
+        println!("MyScheduler::disconnected");
+        println!("Goodbye!");
+        process::exit(1);
+    }
+
+    fn offer_rescinded(
+        &self,
+        _: &SchedulerDriver,
+        offer_id: &proto::OfferID) {
+
+        println!("MyScheduler::offer_rescinded");
+        println!("offer_id: {:?}", offer_id);
+    }
+
+    fn slave_lost(
+        &self,
+        _: &SchedulerDriver,
+        slave_id: &proto::SlaveID) {
+
+        println!("MyScheduler::slave_lost");
+        println!("slave_id: {:?}", slave_id);
+    }
+
+    fn executor_lost(
+        &self,
+        _: &SchedulerDriver,
+        executor_id: &proto::ExecutorID,
+        slave_id: &proto::SlaveID,
+        status: i32) {
+
+        println!("MyScheduler::executor_lost");
+        println!("executor_id: {:?}", executor_id);
+        println!("slave_id: {:?}", slave_id);
+        println!("status: {:?}", status);
     }
 }
 
