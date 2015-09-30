@@ -68,6 +68,15 @@ impl Scheduler for MyScheduler {
         println!("offer_id: {:?}", offer_id);
     }
 
+    fn framework_message(
+        &self,
+        _: &SchedulerDriver,
+        data: &String) {
+
+        println!("MyScheduler::framework_message");
+        println!("data: {:?}", data);
+    }
+
     fn slave_lost(
         &self,
         _: &SchedulerDriver,
@@ -108,4 +117,3 @@ fn main() -> () {
 
     driver.run();
 }
-
