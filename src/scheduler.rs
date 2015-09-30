@@ -18,6 +18,31 @@ pub trait Scheduler {
         driver: &SchedulerDriver,
         offers: Vec<proto::Offer>) -> ();
 
+    fn status_update(
+        &self,
+        driver: &SchedulerDriver,
+        task_status: &proto::TaskStatus) -> ();
+
+    fn disconnected(
+        &self,
+        driver: &SchedulerDriver) -> ();
+
+    fn offer_rescinded(
+        &self,
+        driver: &SchedulerDriver,
+        offer_id: &proto::OfferID) -> ();
+
+    fn slave_lost(
+        &self,
+        driver: &SchedulerDriver,
+        slave_id: &proto::SlaveID) -> ();
+
+    fn executor_lost(
+        &self,
+        driver: &SchedulerDriver,
+        executor_id: &proto::ExecutorID,
+        slave_id: &proto::SlaveID,
+        status: i32) -> ();
 }
 
 pub trait SchedulerDriver {

@@ -1,3 +1,6 @@
+#![allow(non_snake_case)]
+#![allow(non_camel_case_types)]
+
 use libc::{c_void, size_t};
 use std::option::Option;
 use std::slice;
@@ -23,7 +26,7 @@ impl ProtobufObj {
         message: &protobuf::Message,
         data: &mut Vec<u8>
     ) -> ProtobufObj {
-        message.write_to_vec(data);
+        message.write_to_vec(data).unwrap();
         ProtobufObj {
             data: data.as_ptr() as *mut c_void,
             size: data.len() as size_t,
