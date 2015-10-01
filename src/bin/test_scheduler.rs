@@ -71,9 +71,13 @@ impl Scheduler for MyScheduler {
     fn framework_message(
         &self,
         _: &SchedulerDriver,
+        executor_id: &proto::ExecutorID,
+        slave_id: &proto::SlaveID,
         data: &String) {
 
         println!("MyScheduler::framework_message");
+        println!("executor_id: {:?}", executor_id);
+        println!("slave_id: {:?}", slave_id);
         println!("data: {:?}", data);
     }
 
@@ -97,6 +101,15 @@ impl Scheduler for MyScheduler {
         println!("executor_id: {:?}", executor_id);
         println!("slave_id: {:?}", slave_id);
         println!("status: {:?}", status);
+    }
+
+    fn error(
+        &self,
+        _: &SchedulerDriver,
+        message: &String) {
+
+        println!("MyScheduler::error");
+        println!("message: {:?}", message);
     }
 }
 

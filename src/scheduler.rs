@@ -47,7 +47,14 @@ pub trait Scheduler {
     fn framework_message(
         &self,
         driver: &SchedulerDriver,
+        executor_id: &proto::ExecutorID,
+        slave_id: &proto::SlaveID,
         data: &String) -> ();
+
+    fn error(
+        &self,
+        driver: &SchedulerDriver,
+        message: &String) -> ();
 }
 
 pub trait SchedulerDriver {
