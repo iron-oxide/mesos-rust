@@ -43,6 +43,11 @@ pub trait Scheduler {
         executor_id: &proto::ExecutorID,
         slave_id: &proto::SlaveID,
         status: i32) -> ();
+
+    fn framework_message(
+        &self,
+        driver: &SchedulerDriver,
+        data: &String) -> ();
 }
 
 pub trait SchedulerDriver {

@@ -3,14 +3,15 @@
 mod mesos_c;
 mod tests;
 
-use libc::{c_void, size_t};
+use libc::{c_char, c_void, size_t};
 use proto;
 use scheduler::{Scheduler, SchedulerDriver};
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::mem;
 use std::option::Option;
 use std::ptr;
 use std::slice;
+use std::str;
 use std::sync::RwLock;
 
 // HACK. A 128 bit type to hold Rust trait references.
@@ -183,6 +184,21 @@ impl<'a> MesosSchedulerDriver<'a> {
 
             delegate(|scheduler, driver| {
                 scheduler.offer_rescinded(driver, offer_id);
+            });
+        }
+
+
+        extern "C" fn wrapped_framework_message_callback(
+            _: mesos_c::SchedulerDriverPtr,
+            native_data: *const c_char
+        ) -> () {
+            let data_slice = unsafe {
+                CStr::from_ptr(native_data).to_bytes()
+            };
+            let data: String = str::from_utf8(data_slice).unwrap().to_string();
+
+            delegate(|scheduler, driver| {
+                scheduler.framework_message(driver, &data);
             });
         }
 
