@@ -323,4 +323,31 @@ impl<'a> SchedulerDriver for MesosSchedulerDriver<'a> {
         scheduler_status
     }
 
+    fn decline_offer(
+        &self,
+        offer_id: &proto::OfferID,
+        filters: &proto::Filters) -> i32 {
+
+        assert!(self.native_ptr_pair.is_some());
+        let scheduler_ptr_pair = self.native_ptr_pair.unwrap();
+
+        let offer_id_data = &mut vec![];
+        let mut native_offer_id = mesos_c::ProtobufObj::from_message(
+            offer_id,
+            offer_id_data);
+
+        let filters_data = &mut vec![];
+        let mut native_filters = mesos_c::ProtobufObj::from_message(
+            filters,
+            filters_data);
+
+        let scheduler_status = unsafe {
+            mesos_c::scheduler_declineOffer(
+                scheduler_ptr_pair.driver,
+                &mut native_offer_id,
+                &mut native_filters)
+        };
+
+        scheduler_status
+    }
 }
