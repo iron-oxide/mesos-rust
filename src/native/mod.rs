@@ -187,18 +187,31 @@ impl<'a> MesosSchedulerDriver<'a> {
             });
         }
 
-
         extern "C" fn wrapped_framework_message_callback(
             _: mesos_c::SchedulerDriverPtr,
+            native_executor_id: *mut mesos_c::ProtobufObj,
+            native_slave_id: *mut mesos_c::ProtobufObj,
             native_data: *const c_char
         ) -> () {
+            let executor_id = &mut proto::ExecutorID::new();
+            mesos_c::ProtobufObj::merge(native_executor_id, executor_id);
+
+            let slave_id = &mut proto::SlaveID::new();
+            mesos_c::ProtobufObj::merge(native_slave_id, slave_id);
+
             let data_slice = unsafe {
                 CStr::from_ptr(native_data).to_bytes()
             };
-            let data: String = str::from_utf8(data_slice).unwrap().to_string();
+
+            let data: String = str::from_utf8(data_slice)
+                .unwrap()
+                .to_string();
 
             delegate(|scheduler, driver| {
-                scheduler.framework_message(driver, &data);
+                scheduler.framework_message(driver,
+                                            executor_id,
+                                            slave_id,
+                                            &data);
             });
         }
 
@@ -233,6 +246,23 @@ impl<'a> MesosSchedulerDriver<'a> {
             });
         }
 
+        extern "C" fn wrapped_error_callback(
+            _: mesos_c::SchedulerDriverPtr,
+            native_message: *const c_char
+        ) -> () {
+            let message_slice = unsafe {
+                CStr::from_ptr(native_message).to_bytes()
+            };
+
+            let message: String = str::from_utf8(message_slice)
+                .unwrap()
+                .to_string();
+
+            delegate(|scheduler, driver| {
+                scheduler.error(driver, &message);
+            });
+        }
+
         mesos_c::SchedulerCallBacks {
             registeredCallBack: Some(wrapped_registered_callback),
             reregisteredCallBack: Some(wrapped_reregistered_callback),
@@ -240,10 +270,10 @@ impl<'a> MesosSchedulerDriver<'a> {
             statusUpdateCallBack: Some(wrapped_status_update_callback),
             disconnectedCallBack: Some(wrapped_disconnected_callback),
             offerRescindedCallBack: Some(wrapped_offer_rescinded_callback),
-            frameworkMessageCallBack: None,
+            frameworkMessageCallBack: Some(wrapped_framework_message_callback),
             slaveLostCallBack: Some(wrapped_slave_lost_callback),
             executorLostCallBack: Some(wrapped_executor_lost_callback),
-            errorCallBack: None,
+            errorCallBack: Some(wrapped_error_callback),
         }
     }
 
