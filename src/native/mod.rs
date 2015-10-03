@@ -45,7 +45,7 @@ lazy_static! {
 }
 
 fn delegate<L, T>(lambda: L) -> T
-    where L : Fn(&Scheduler, &SchedulerDriver) -> T {
+    where L : Fn(&Scheduler, &MesosSchedulerDriver) -> T {
 
     let scheduler: &Scheduler = unsafe {
         let SchedulerPtr(raw) =
@@ -79,22 +79,29 @@ impl<'a> MesosSchedulerDriver<'a> {
         scheduler: &Scheduler,
         framework_info: proto::FrameworkInfo,
         master: String
-    ) -> MesosSchedulerDriver {
+    ) -> &MesosSchedulerDriver {
 
-        let driver = MesosSchedulerDriver {
+        let driver = &MesosSchedulerDriver {
             scheduler: scheduler,
             framework_info: framework_info,
             master: master,
             native_ptr_pair: None,
         };
 
-        // Save pointers to be used when constructing C funtions that
-        // delegate to the Rust scheduler implementation.
-        let mut sched_ptr = SCHEDULER_PTR.write().unwrap();
-        *sched_ptr = Some(unsafe { mem::transmute(scheduler) });
+        // Limited scope for lock acquisition
+        {
+            // Save pointers to be used when constructing C funtions that
+            // delegate to the Rust scheduler implementation.
+            let mut sched_ptr = SCHEDULER_PTR.write().unwrap();
+            *sched_ptr = Some(unsafe { mem::transmute(scheduler) });
 
-        let mut driver_ptr = SCHEDULER_DRIVER_PTR.write().unwrap();
-        *driver_ptr = Some(unsafe { mem::transmute(&driver) });
+            let mut driver_ptr = SCHEDULER_DRIVER_PTR.write().unwrap();
+            *driver_ptr = Some(unsafe { mem::transmute(driver) });
+        }
+
+        println!("Just wrote into driver_ptr...");
+
+        delegate(|_, d| { d.print_debug_info(); });
 
         driver
     }
@@ -280,6 +287,10 @@ impl<'a> MesosSchedulerDriver<'a> {
 }
 
 impl<'a> SchedulerDriver for MesosSchedulerDriver<'a> {
+
+    fn print_debug_info(&self) {
+        println!("framework_info: [{:?}]", self.framework_info);
+    }
 
     fn run(&mut self) -> i32 {
         assert!(self.native_ptr_pair.is_none());

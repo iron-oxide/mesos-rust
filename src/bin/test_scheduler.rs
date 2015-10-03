@@ -36,6 +36,9 @@ impl Scheduler for MyScheduler {
 
         println!("MyScheduler::resource_offers");
         println!("Received [{}] offers", offers.len());
+
+        driver.print_debug_info();
+
         for offer in offers {
             println!("Declining  offer: [{:?}]", offer);
             driver.decline_offer(

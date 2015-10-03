@@ -58,6 +58,8 @@ pub trait Scheduler {
 }
 
 pub trait SchedulerDriver {
+    fn print_debug_info(&self) -> ();
+
     fn run(&mut self) -> i32;
 
     fn decline_offer(
