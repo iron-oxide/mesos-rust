@@ -11,13 +11,14 @@ struct MyScheduler;
 impl Scheduler for MyScheduler {
     fn registered(
         &self,
-        _: &SchedulerDriver,
+        driver: &SchedulerDriver,
         framework_id: &proto::FrameworkID,
         master_info: &proto::MasterInfo) {
 
         println!("MyScheduler::registered");
         println!("framework_id: {:?}", framework_id);
         println!("master_info: {:?}", master_info);
+        driver.print_debug_info();
     }
 
     fn reregistered(
@@ -36,7 +37,6 @@ impl Scheduler for MyScheduler {
 
         println!("MyScheduler::resource_offers");
         println!("Received [{}] offers", offers.len());
-
         driver.print_debug_info();
 
         for offer in offers {
@@ -130,7 +130,7 @@ fn main() -> () {
 
     let mut driver = MesosSchedulerDriver::new(
         &scheduler,
-        framework_info,
+        &framework_info,
         "localhost:5050".to_string(),
     );
 
