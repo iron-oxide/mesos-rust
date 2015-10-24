@@ -375,14 +375,10 @@ void CScheduler::resourceOffers(
     return;
   }
 
-  vector<std::string> encodedOffers;
-  vector<ProtobufObj> offersObj;
+  vector<std::string> encodedOffers(offers.size());
+  vector<ProtobufObj> offersObj(offers.size());
   for (size_t i = 0; i < offers.size(); i++) {
-    std::string encodedOffer;
-    ProtobufObj offerObj =
-      utils::serialize<const Offer>(offers[i], encodedOffer);
-
-    offersObj.push_back(offerObj);
+    offersObj[i] = utils::serialize<const Offer>(offers[i], encodedOffers[i]);
   }
 
   callbacks.resourceOffersCallBack(payload, &offersObj[0], offersObj.size());
