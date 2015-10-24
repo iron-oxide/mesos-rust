@@ -11,14 +11,13 @@ struct MyScheduler;
 impl Scheduler for MyScheduler {
     fn registered(
         &self,
-        driver: &SchedulerDriver,
+        _: &SchedulerDriver,
         framework_id: &proto::FrameworkID,
         master_info: &proto::MasterInfo) {
 
         println!("MyScheduler::registered");
         println!("framework_id: {:?}", framework_id);
         println!("master_info: {:?}", master_info);
-        driver.print_debug_info();
     }
 
     fn reregistered(
@@ -37,7 +36,6 @@ impl Scheduler for MyScheduler {
 
         println!("MyScheduler::resource_offers");
         println!("Received [{}] offers", offers.len());
-        driver.print_debug_info();
 
         for offer in offers {
             println!("Declining  offer: [{:?}]", offer);

@@ -29,24 +29,14 @@ impl<'a> MesosSchedulerDriver<'a> {
         framework_info: &'d proto::FrameworkInfo,
         master: String
     ) -> Box<MesosSchedulerDriver<'d>> {
-
-        let mut driver = Box::new(
+        Box::new(
             MesosSchedulerDriver {
                 scheduler: scheduler,
                 framework_info: framework_info,
                 master: master,
                 native_ptr_pair: None,
             }
-        );
-
-        // Save pointers to be used when constructing C funtions that
-        // delegate to the Rust scheduler implementation.
-        driver.native_ptr_pair = Some(mesos_c::SchedulerPtrPair {
-            driver: unsafe { mem::transmute(&driver) },
-            scheduler: unsafe { mem::transmute(&scheduler) },
-        });
-
-        driver
+        )
     }
 
     fn create_callbacks(&self) -> mesos_c::SchedulerCallBacks {
@@ -252,21 +242,16 @@ impl<'a> MesosSchedulerDriver<'a> {
 
 impl<'a> SchedulerDriver for MesosSchedulerDriver<'a> {
 
-    fn print_debug_info(&self) {
-        println!("MesosSchedulerDriver:");
-        println!("  framework_info: [{:?}]", self.framework_info);
-        println!("  master: [{:?}]", self.master);
-        println!("  native_ptr_pair.is_some(): [{:?}]",
-            self.native_ptr_pair.is_some());
-    }
-
     fn run(&mut self) -> i32 {
 
         let callbacks: *mut mesos_c::SchedulerCallBacks =
             &mut self.create_callbacks();
 
         let native_payload: *mut c_void = unsafe {
-            mem::transmute(&self.clone())
+            // Super-unsafe!  This violates Rust's reference aliasing and
+            // memory safety guarantees.  We promise not to modify this
+            // structure from native code.
+            mem::transmute(&mut *self)
         };
 
         // lifetime of pb_data must exceed native_framework_info
@@ -279,12 +264,16 @@ impl<'a> SchedulerDriver for MesosSchedulerDriver<'a> {
 
         let native_master = CString::new(self.master.clone()).unwrap();
 
-        let native_ptr_pair = unsafe {
-            mesos_c::scheduler_init(callbacks,
-                native_payload,
-                native_framework_info as *mut mesos_c::ProtobufObj,
-                native_master.as_ptr() as *const i8)
-        };
+        self.native_ptr_pair = Some(
+            unsafe {
+                mesos_c::scheduler_init(callbacks,
+                    native_payload,
+                    native_framework_info as *mut mesos_c::ProtobufObj,
+                    native_master.as_ptr() as *const i8)
+            }
+        );
+
+        let native_ptr_pair = self.native_ptr_pair.unwrap();
 
         println!("Starting scheduler driver");
         let scheduler_status = unsafe{
@@ -305,9 +294,6 @@ impl<'a> SchedulerDriver for MesosSchedulerDriver<'a> {
         &self,
         offer_id: &proto::OfferID,
         filters: &proto::Filters) -> i32 {
-
-        println!("MesosSchedulerDriver::decline_offer");
-        self.print_debug_info();
 
         assert!(self.native_ptr_pair.is_some());
         let native_driver = self.native_ptr_pair.unwrap().driver;
