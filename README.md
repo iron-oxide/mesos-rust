@@ -11,6 +11,8 @@ _Note: this project is not ready to use for anything._
 
 ## Building `mesos-rust`
 
+This project depends on Rust version 1.3.
+
 Using [cargo](http://crates.io):
 
 ```
