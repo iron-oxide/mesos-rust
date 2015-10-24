@@ -17,10 +17,15 @@ Using [cargo](http://crates.io):
 $ cargo rustc --bin test_scheduler -- -l mesos -l protobuf-lite
 ```
 
+Using `make`:
+
+```
+$ make
+```
+
 Take it for a test drive!
 
 ```
-$ mesos-local &
+$ mesos-local --num_slaves=2 &
 $ target/debug/test_scheduler
 ```
-
