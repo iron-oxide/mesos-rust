@@ -31,13 +31,17 @@ impl Scheduler for MyScheduler {
 
     fn resource_offers(
         &self,
-        _: &SchedulerDriver,
+        driver: &SchedulerDriver,
         offers: Vec<proto::Offer>) {
 
         println!("MyScheduler::resource_offers");
         println!("Received [{}] offers", offers.len());
+
         for offer in offers {
-            println!("  Offer: [{:?}]", offer);
+            println!("Declining  offer: [{:?}]", offer);
+            driver.decline_offer(
+                offer.get_id(),
+                &proto::Filters::new());
         }
     }
 
@@ -124,7 +128,7 @@ fn main() -> () {
 
     let mut driver = MesosSchedulerDriver::new(
         &scheduler,
-        framework_info,
+        &framework_info,
         "localhost:5050".to_string(),
     );
 
