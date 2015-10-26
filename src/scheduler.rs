@@ -65,4 +65,10 @@ pub trait SchedulerDriver {
         &self,
         offer_id: &proto::OfferID,
         filters: &proto::Filters) -> i32;
+
+    fn launch_tasks(
+        &self,
+        offer_id: &proto::OfferID,
+        tasks: &Vec<&proto::TaskInfo>,
+        filters: &proto::Filters) -> i32;
 }

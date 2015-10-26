@@ -37,10 +37,37 @@ impl Scheduler for MyScheduler {
         println!("MyScheduler::resource_offers");
         println!("Received [{}] offers", offers.len());
 
+        // for offer in offers {
+        //     println!("Declining  offer: [{:?}]", offer);
+        //     driver.decline_offer(
+        //         offer.get_id(),
+        //         &proto::Filters::new());
+        // }
+
         for offer in offers {
-            println!("Declining  offer: [{:?}]", offer);
-            driver.decline_offer(
+            println!("Launching a task on offer: [{:?}]", offer);
+            let mut task = proto::TaskInfo::new();
+
+            task.set_name("mesos-rust-task".to_string());
+
+            let mut task_id = proto::TaskID::new();
+            task_id.set_value(offer.get_id().get_value().to_string());
+            task.set_task_id(task_id);
+
+            let mut slave_id = proto::SlaveID::new();
+            slave_id.set_value(offer.get_slave_id().get_value().to_string());
+            task.set_slave_id(slave_id);
+
+            task.set_resources(offer.clone().take_resources());
+
+            let mut command = proto::CommandInfo::new();
+            command.set_shell(true);
+            command.set_value("env && sleep 10".to_string());
+            task.set_command(command);
+
+            driver.launch_tasks(
                 offer.get_id(),
+                &vec![&task],
                 &proto::Filters::new());
         }
     }
