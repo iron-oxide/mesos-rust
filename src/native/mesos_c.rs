@@ -27,6 +27,10 @@ impl ProtobufObj {
         data: &mut Vec<u8>
     ) -> ProtobufObj {
         message.write_to_vec(data).unwrap();
+        ProtobufObj::from_vec(data)
+    }
+
+    pub fn from_vec(data: &mut Vec<u8>) -> ProtobufObj {
         ProtobufObj {
             data: data.as_ptr() as *mut c_void,
             size: data.len() as size_t,

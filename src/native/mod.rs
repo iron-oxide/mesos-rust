@@ -317,4 +317,59 @@ impl<'a> SchedulerDriver for MesosSchedulerDriver<'a> {
 
         scheduler_status
     }
+
+    fn launch_tasks(
+        &self,
+        offer_id: &proto::OfferID,
+        tasks: &Vec<&proto::TaskInfo>,
+        filters: &proto::Filters) -> i32 {
+
+        assert!(self.native_ptr_pair.is_some());
+        let native_driver = self.native_ptr_pair.unwrap().driver;
+
+        let offer_id_data = &mut vec![];
+        let native_offer_id = &mut mesos_c::ProtobufObj::from_message(
+            offer_id,
+            offer_id_data);
+
+        let native_task_data = &mut vec![];
+        for task in tasks {
+            let task_data = &mut vec![];
+            mesos_c::ProtobufObj::from_message(*task, task_data);
+
+            // write length of vec as a u64 to native_task_data
+            let length_pointer: *const u8 = unsafe {
+                mem::transmute(&(task_data.len() as u64))
+            };
+
+            let length_data: Vec<u8> = unsafe {
+                slice::from_raw_parts(
+                    length_pointer,
+                    8 as usize).to_vec() // 8 bytes in a u64
+            };
+
+            native_task_data.extend(length_data);
+
+            // write vec content to native_task_data
+            native_task_data.extend(task_data.iter().cloned());
+        }
+
+        let native_tasks =
+            &mut mesos_c::ProtobufObj::from_vec(native_task_data);
+
+        let filters_data = &mut vec![];
+        let native_filters = &mut mesos_c::ProtobufObj::from_message(
+            filters,
+            filters_data);
+
+        let scheduler_status = unsafe {
+            mesos_c::scheduler_launchTasks(
+                native_driver,
+                native_offer_id as *mut mesos_c::ProtobufObj,
+                native_tasks as *mut mesos_c::ProtobufObj,
+                native_filters as *mut mesos_c::ProtobufObj)
+        };
+
+        scheduler_status
+    }
 }
