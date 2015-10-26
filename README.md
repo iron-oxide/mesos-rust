@@ -2,7 +2,23 @@
 
 Rust language bindings for [Apache Mesos](http://mesos.apache.org).
 
-_Note: this project is not ready to use for anything._
+## Status
+
+_**Note:** these bindings are not production-ready.  
+Rust hackers welcome, this is really fun so far!_
+
+There is a functioning example scheduler in the repo: [src/bin/test_scheduler.rs](src/bin/test_scheduler.rs).
+
+## Project Roadmap
+
+- [X] Provide a trait for Rust scheduler implementations.
+- [X] Wire up scheduler callbacks for the native (libmesos) scheduler driver.
+- [ ] Implement native scheduler driver calls. _(In progress: `launch_tasks` and `decline_offer` work so far)_.
+- [ ] Provide a trait for Rust executor implementations.
+- [ ] Wire up executor callbacks for the native (libmesos) executor driver.
+- [ ] Implement native executor driver calls.
+- [ ] Implement scheduler and executor drivers based on the new HTTP APIs.
+- [ ] Experiment with higher-level API constructs to ease Rust framework writing.
 
 ## Native Dependencies
 
