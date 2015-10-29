@@ -1,9 +1,19 @@
 #![allow(dead_code)]
 
+//! # Native bindings for Apache Mesos.
+//!
+//! This module links dynamically against `libmesos` and provides a native
+//! `Scheduler` implementation, which delegates to a user-supplied Rust
+//! `Scheduler` for all callbacks.
+//!
+//! Additionally, this module provides a native `SchedulerDriver` that manages
+//! the backing native state and hides the required function delegate
+//! wiring.
+
 mod mesos_c;
 mod tests;
 
-use libc::{c_char, c_void, size_t};
+use libc::{c_char, c_int, c_void, size_t};
 use proto;
 use scheduler::{Scheduler, SchedulerDriver};
 use std::boxed::Box;
@@ -14,7 +24,6 @@ use std::slice;
 use std::str;
 
 #[derive(Clone)]
-#[repr(C)]
 pub struct MesosSchedulerDriver<'a> {
     scheduler: &'a Scheduler,
     framework_info: &'a proto::FrameworkInfo,
@@ -318,6 +327,48 @@ impl<'a> SchedulerDriver for MesosSchedulerDriver<'a> {
         scheduler_status
     }
 
+    fn request_resources(
+        &self,
+        requests: &Vec<&proto::Request>) -> i32 {
+
+        assert!(self.native_ptr_pair.is_some());
+        let native_driver = self.native_ptr_pair.unwrap().driver;
+
+        let native_request_data = &mut vec![];
+        for request in requests {
+            let request_data = &mut vec![];
+            mesos_c::ProtobufObj::from_message(*request, request_data);
+
+            // write length of vec as a u64 to native_task_data
+            let length_pointer: *const u8 = unsafe {
+                mem::transmute(&(request_data.len() as u64))
+            };
+
+            let length_data: Vec<u8> = unsafe {
+                slice::from_raw_parts(
+                    length_pointer,
+                    8 as usize).to_vec() // 8 bytes in a u64
+            };
+
+            native_request_data.extend(length_data);
+
+            // write vec content to native_task_data
+            native_request_data.extend(request_data.iter().cloned());
+        }
+
+        let native_requests =
+            &mut mesos_c::ProtobufObj::from_vec(native_request_data);
+
+        let scheduler_status = unsafe {
+            mesos_c::scheduler_requestResources(
+                native_driver,
+                native_requests as *mut mesos_c::ProtobufObj)
+        };
+
+        scheduler_status
+    }
+
+
     fn launch_tasks(
         &self,
         offer_id: &proto::OfferID,
@@ -371,5 +422,101 @@ impl<'a> SchedulerDriver for MesosSchedulerDriver<'a> {
         };
 
         scheduler_status
+    }
+
+    fn revive_offers(&self) -> i32 {
+
+        assert!(self.native_ptr_pair.is_some());
+        let native_driver = self.native_ptr_pair.unwrap().driver;
+
+        let scheduler_status = unsafe {
+            mesos_c::scheduler_reviveOffers(native_driver)
+        };
+
+        scheduler_status
+    }
+
+    fn kill_task(
+        &self,
+        task_id: &proto::TaskID) -> i32 {
+
+        assert!(self.native_ptr_pair.is_some());
+        let native_driver = self.native_ptr_pair.unwrap().driver;
+
+        let task_id_data = &mut vec![];
+        let native_task_id = &mut mesos_c::ProtobufObj::from_message(
+            task_id,
+            task_id_data);
+
+        let scheduler_status = unsafe {
+            mesos_c::scheduler_killTask(
+                native_driver,
+                native_task_id as *mut mesos_c::ProtobufObj)
+        };
+
+        scheduler_status
+    }
+
+    fn send_framework_message(
+        &self,
+        executor_id: &proto::ExecutorID,
+        slave_id: &proto::SlaveID,
+        data: &Vec<u8>) -> i32 {
+
+        assert!(self.native_ptr_pair.is_some());
+        let native_driver = self.native_ptr_pair.unwrap().driver;
+
+        let executor_id_data = &mut vec![];
+        let native_executor_id = &mut mesos_c::ProtobufObj::from_message(
+            executor_id,
+            executor_id_data);
+
+        let slave_id_data = &mut vec![];
+        let native_slave_id = &mut mesos_c::ProtobufObj::from_message(
+            slave_id,
+            slave_id_data);
+
+        let native_data = data.as_ptr() as *mut c_char;
+
+        let scheduler_status = unsafe {
+            mesos_c::scheduler_sendFrameworkMessage(
+                native_driver,
+                native_executor_id as *mut mesos_c::ProtobufObj,
+                native_slave_id as *mut mesos_c::ProtobufObj,
+                native_data)
+        };
+
+        scheduler_status
+    }
+
+    fn stop(
+        &self,
+        failover: bool) -> i32 {
+
+        assert!(self.native_ptr_pair.is_some());
+        let native_driver = self.native_ptr_pair.unwrap().driver;
+
+        let scheduler_status = unsafe {
+            mesos_c::scheduler_stop(
+                native_driver,
+                failover as c_int)
+        };
+
+        scheduler_status
+    }
+
+}
+
+// Clean up backing native data structures when a MesosSchedulerDriver
+// instance leaves scope.
+impl<'a> Drop for MesosSchedulerDriver<'a> {
+    fn drop(&mut self) {
+        if self.native_ptr_pair.is_some() {
+            let native_driver = self.native_ptr_pair.unwrap().driver;
+            let native_scheduler = self.native_ptr_pair.unwrap().scheduler;
+            unsafe {
+                mesos_c::scheduler_destroy(native_driver, native_scheduler);
+            }
+        }
     }
 }

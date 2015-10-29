@@ -44,6 +44,7 @@ impl Scheduler for MyScheduler {
         //         &proto::Filters::new());
         // }
 
+        // Launch a task that consumes all the resources from each offer.
         for offer in offers {
             println!("Launching a task on offer: [{:?}]", offer);
             let mut task = proto::TaskInfo::new();
@@ -54,9 +55,7 @@ impl Scheduler for MyScheduler {
             task_id.set_value(offer.get_id().get_value().to_string());
             task.set_task_id(task_id);
 
-            let mut slave_id = proto::SlaveID::new();
-            slave_id.set_value(offer.get_slave_id().get_value().to_string());
-            task.set_slave_id(slave_id);
+            task.set_slave_id(offer.get_slave_id().clone());
 
             task.set_resources(offer.clone().take_resources());
 
@@ -74,11 +73,18 @@ impl Scheduler for MyScheduler {
 
     fn status_update(
         &self,
-        _: &SchedulerDriver,
+        driver: &SchedulerDriver,
         task_status: &proto::TaskStatus) {
 
         println!("MyScheduler::status_update");
         println!("task_status: {:?}", task_status);
+
+        // Kill all running tasks.
+        if task_status.get_state() == proto::TaskState::TASK_RUNNING {
+            let task_id = task_status.get_task_id();
+            println!("Killing task [{:?}]", task_id);
+            driver.kill_task(task_id);
+        }
     }
 
     fn disconnected(
@@ -150,6 +156,15 @@ fn main() -> () {
     let mut framework_info = proto::FrameworkInfo::new();
     framework_info.set_name("mesos-rust-test".to_string());
     framework_info.set_user("root".to_string());
+
+    // Uncomment the following lines to allow the scheduler to fail over
+    // and recover running tasks.  Capture and persist the assigned framework
+    // id in the scheduler `registered` callback.
+    // framework_info.set_checkpoint(true);
+    // framework_info.set_failover_timeout(604800000 as f64); // 1 week in ms.
+    // if previous_framework_id.is_some() {
+    //     framework_info.set_framework_id(previous_framework_id.unwrap());
+    // }
 
     println!("framework_info: [{:?}]", framework_info);
 
