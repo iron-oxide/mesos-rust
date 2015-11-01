@@ -1,6 +1,5 @@
 #![allow(non_snake_case)]
 #![allow(non_camel_case_types)]
-#![allow(drop_with_repr_extern)] // for MesosSchedulerDriver
 
 use libc::{c_void, size_t};
 use std::option::Option;
