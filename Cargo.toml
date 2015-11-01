@@ -1,8 +1,13 @@
 [package]
 name = "mesos"
+description = "Rust language bindings for writing Apache Mesos frameworks."
 version = "0.1.0"
-authors = ["Connor Doyle <connor@mesosphere.io>"]
+homepage = "https://github.com/ConnorDoyle/mesos-rust"
+repository = "https://github.com/ConnorDoyle/mesos-rust.git"
+authors = ["Connor Doyle <connor.p.d@gmail.com>"]
 build = "build.rs"
+readme = "README.md"
+license = "Apache-2.0"
 
 [build-dependencies]
 gcc = "0.3"
