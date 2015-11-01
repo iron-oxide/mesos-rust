@@ -5,7 +5,7 @@ use proto;
 /// you block within a callback because it may cause a deadlock.
 ///
 /// Each callback includes a reference to the executor driver that was used
-/// to run this executor. The reference will not change for the * duration
+/// to run this executor. The reference will not change for the duration
 /// of an executor (i.e., from the point you do `ExecutorDriver::start` to
 /// the point that `ExecutorDriver::join` returns. This is intended for
 /// convenience so that an executor doesn't need to store a reference to the
