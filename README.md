@@ -14,7 +14,7 @@ There is a functioning example scheduler in the repo: [src/bin/test_scheduler.rs
 - [X] Provide a trait for Rust scheduler implementations.
 - [X] Wire up scheduler callbacks for the native (libmesos) scheduler driver.
 - [X] Implement native scheduler driver calls.
-- [ ] Provide a trait for Rust executor implementations.
+- [X] Provide a trait for Rust executor implementations.
 - [ ] Wire up executor callbacks for the native (libmesos) executor driver.
 - [ ] Implement native executor driver calls.
 - [ ] Implement scheduler and executor drivers based on the new HTTP APIs.
