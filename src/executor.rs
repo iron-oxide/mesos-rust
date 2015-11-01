@@ -17,6 +17,7 @@ pub trait Executor {
     /// to its executors through the ExecutorInfo's `data` field.
     fn registered(
         &self,
+        driver: &ExecutorDriver,
         executor_info: &proto::ExecutorInfo,
         framework_info: &proto::FrameworkInfo,
         slave_info: &proto::SlaveInfo);
@@ -24,11 +25,12 @@ pub trait Executor {
     /// Invoked when the executor re-registers with a restarted slave.
     fn reregistered(
         &self,
+        driver: &ExecutorDriver,
         slave_info: &proto::SlaveInfo);
 
     /// Invoked when the executor becomes "disconnected" from the slave
     /// (e.g., the slave was restarted due to an upgrade).
-    fn disconnected(&self);
+    fn disconnected(&self, driver: &ExecutorDriver);
 
     /// Invoked when a task has been launched on this executor (initiated
     /// via `SchedulerDriver::launch_tasks`. Note that this task can be
@@ -37,6 +39,7 @@ pub trait Executor {
     /// this callback has returned.
     fn launch_task(
         &self,
+        driver: &ExecutorDriver,
         task: &proto::TaskInfo);
 
     /// Invoked when a task running within this executor has been killed
@@ -46,6 +49,7 @@ pub trait Executor {
     /// `ExecutorDriver::send_status_update`.
     fn kill_task(
         &self,
+        driver: &ExecutorDriver,
         task_id: &proto::TaskID);
 
     /// Invoked when a framework message has arrived for this executor.
@@ -53,6 +57,7 @@ pub trait Executor {
     /// to be retransmitted in any reliable fashion.
     fn framework_message(
         &self,
+        driver: &ExecutorDriver,
         data: &Vec<u8>);
 
     /// Invoked when the executor should terminate all of it's currently
@@ -61,12 +66,12 @@ pub trait Executor {
     /// status updates for (e.g. TASK_KILLED, TASK_FINISHED, TASK_FAILED,
     /// TASK_LOST, TASK_ERROR, etc) a TASK_LOST status update will be
     /// created.
-    fn shutdown(&self);
+    fn shutdown(&self, driver: &ExecutorDriver);
 
     /// Invoked when a fatal error has occurred with the executor and/or
     /// executor driver. The driver will be aborted BEFORE invoking this
     /// callback.
-    fn error(&self, message: String);
+    fn error(&self, driver: &ExecutorDriver, message: String);
 
 }
 

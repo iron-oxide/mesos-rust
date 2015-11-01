@@ -13,6 +13,7 @@
 mod mesos_c;
 mod tests;
 
+use executor::{Executor, ExecutorDriver};
 use libc::{c_char, c_int, c_void, size_t};
 use proto;
 use scheduler::{Scheduler, SchedulerDriver};
@@ -23,12 +24,30 @@ use std::option::Option;
 use std::slice;
 use std::str;
 
+//////////////////////////////////////////////////////////////////////////////
+// Native scheduler support
+//////////////////////////////////////////////////////////////////////////////
+
 #[derive(Clone)]
 pub struct MesosSchedulerDriver<'a> {
     scheduler: &'a Scheduler,
     framework_info: &'a proto::FrameworkInfo,
     master: String,
     native_ptr_pair: Option<mesos_c::SchedulerPtrPair>,
+}
+
+// Clean up backing native data structures when a MesosSchedulerDriver
+// instance leaves scope.
+impl<'a> Drop for MesosSchedulerDriver<'a> {
+    fn drop(&mut self) {
+        if self.native_ptr_pair.is_some() {
+            let native_driver = self.native_ptr_pair.unwrap().driver;
+            let native_scheduler = self.native_ptr_pair.unwrap().scheduler;
+            unsafe {
+                mesos_c::scheduler_destroy(native_driver, native_scheduler);
+            }
+        }
+    }
 }
 
 impl<'a> MesosSchedulerDriver<'a> {
@@ -518,16 +537,175 @@ impl<'a> SchedulerDriver for MesosSchedulerDriver<'a> {
 
 }
 
-// Clean up backing native data structures when a MesosSchedulerDriver
+//////////////////////////////////////////////////////////////////////////////
+// Native executor support
+//////////////////////////////////////////////////////////////////////////////
+
+#[derive(Clone)]
+pub struct MesosExecutorDriver<'a> {
+    executor: &'a Executor,
+    native_ptr_pair: Option<mesos_c::ExecutorPtrPair>,
+}
+
+// Clean up backing native data structures when a MesosExecutorDriver
 // instance leaves scope.
-impl<'a> Drop for MesosSchedulerDriver<'a> {
+impl<'a> Drop for MesosExecutorDriver<'a> {
     fn drop(&mut self) {
         if self.native_ptr_pair.is_some() {
             let native_driver = self.native_ptr_pair.unwrap().driver;
-            let native_scheduler = self.native_ptr_pair.unwrap().scheduler;
+            let native_executor = self.native_ptr_pair.unwrap().executor;
             unsafe {
-                mesos_c::scheduler_destroy(native_driver, native_scheduler);
+                mesos_c::executor_destroy(native_driver, native_executor);
             }
         }
     }
+}
+
+impl<'a> MesosExecutorDriver<'a> {
+
+    pub fn new<'d>(executor: &'d Executor) -> Box<MesosExecutorDriver<'d>> {
+        Box::new(
+            MesosExecutorDriver {
+                executor: executor,
+                native_ptr_pair: None,
+            }
+        )
+    }
+
+    // Returns a C struct containing nullable C function pointers, where
+    // each such pointer refers to a wrapper function that unmarshals native
+    // data structures and delegates to this driver's (Rust) executor
+    // implementation.
+    //
+    // A pointer to the result struct is eventually passed to the native
+    // function `executor_init`.
+    fn create_callbacks(&self) -> mesos_c::ExecutorCallBacks {
+
+        extern "C" fn wrapped_registered_callback(
+            native_executor_driver: mesos_c::ExecutorDriverPtr,
+            native_executor_info: *mut mesos_c::ProtobufObj,
+            native_framework_info: *mut mesos_c::ProtobufObj,
+            native_slave_info: *mut mesos_c::ProtobufObj
+        ) -> () {
+            let driver: &MesosExecutorDriver = unsafe {
+                mem::transmute(native_executor_driver)
+            };
+
+            let executor_info = &mut proto::ExecutorInfo::new();
+            mesos_c::ProtobufObj::merge(native_executor_info, executor_info);
+
+            let framework_info = &mut proto::FrameworkInfo::new();
+            mesos_c::ProtobufObj::merge(native_framework_info, framework_info);
+
+            let slave_info = &mut proto::SlaveInfo::new();
+            mesos_c::ProtobufObj::merge(native_slave_info, slave_info);
+
+            driver.executor.registered(
+                driver,
+                executor_info,
+                framework_info,
+                slave_info);
+        }
+
+        mesos_c::ExecutorCallBacks {
+            registeredCallBack: Some(wrapped_registered_callback),
+            reregisteredCallBack: None,
+            disconnectedCallBack: None,
+            launchTaskCallBack: None,
+            killTaskCallBack: None,
+            frameworkMessageCallBack: None,
+            shutdownCallBack: None,
+            errorCallBack: None,
+        }
+    }
+
+}
+
+impl<'a> ExecutorDriver for MesosExecutorDriver<'a> {
+
+    fn run(&mut self) -> i32 {
+
+        let callbacks: *mut mesos_c::ExecutorCallBacks =
+            &mut self.create_callbacks();
+
+        let native_payload: *mut c_void = unsafe {
+            // Super-unsafe!  This violates Rust's reference aliasing and
+            // memory safety guarantees.  The MesosExecutorDriver data
+            // structure is opaque to the underlying native code (notice how
+            // it's not annotated with #[repr(C)]; but anyway we promise not
+            // to modify this structure from foreign code).
+            mem::transmute(&mut *self)
+        };
+
+        self.native_ptr_pair = Some(
+            unsafe { mesos_c::executor_init(callbacks, native_payload) }
+        );
+
+        let native_ptr_pair = self.native_ptr_pair.unwrap();
+
+        println!("Starting executor driver");
+        let executor_status = unsafe{
+            mesos_c::executor_start(native_ptr_pair.driver)
+        };
+        println!("executor_status: [{}]", executor_status);
+
+        println!("Joining executor driver");
+        let executor_status = unsafe{
+            mesos_c::executor_join(native_ptr_pair.driver)
+        };
+        println!("executor_status: [{}]", executor_status);
+
+        executor_status
+    }
+
+
+    fn stop(&self) -> i32 {
+
+        assert!(self.native_ptr_pair.is_some());
+        let native_driver = self.native_ptr_pair.unwrap().driver;
+
+        let executor_status = unsafe {
+            mesos_c::executor_stop(native_driver)
+        };
+
+        executor_status
+    }
+
+    fn send_status_update(
+        &self,
+        task_status: &proto::TaskStatus) -> i32 {
+
+        assert!(self.native_ptr_pair.is_some());
+        let native_driver = self.native_ptr_pair.unwrap().driver;
+
+        let task_status_data = &mut vec![];
+        let native_task_status = &mut mesos_c::ProtobufObj::from_message(
+            task_status,
+            task_status_data);
+
+        let executor_status = unsafe {
+            mesos_c::executor_sendStatusUpdate(
+                native_driver,
+                native_task_status)
+        };
+
+        executor_status
+    }
+
+    fn send_framework_message(
+        &self,
+        data: &Vec<u8>) -> i32 {
+
+        assert!(self.native_ptr_pair.is_some());
+        let native_driver = self.native_ptr_pair.unwrap().driver;
+
+        let native_data = data.as_ptr() as *mut c_char;
+
+        let executor_status = unsafe {
+            mesos_c::executor_sendFrameworkMessage(native_driver, native_data)
+        };
+
+        executor_status
+    }
+
 }
