@@ -48,6 +48,13 @@ impl<'a> MesosSchedulerDriver<'a> {
         )
     }
 
+    // Returns a C struct containing nullable C function pointers, where
+    // each such pointer refers to a wrapper function that unmarshals native
+    // data structures and delegates to this driver's (Rust) scheduler
+    // implementation.
+    //
+    // A pointer to the result struct is eventually passed to the native
+    // function `scheduler_init`.
     fn create_callbacks(&self) -> mesos_c::SchedulerCallBacks {
 
         extern "C" fn wrapped_registered_callback(
@@ -258,12 +265,15 @@ impl<'a> SchedulerDriver for MesosSchedulerDriver<'a> {
 
         let native_payload: *mut c_void = unsafe {
             // Super-unsafe!  This violates Rust's reference aliasing and
-            // memory safety guarantees.  We promise not to modify this
-            // structure from native code.
+            // memory safety guarantees.  The MesosSchedulerDriver data
+            // structure is opaque to the underlying native code (notice how
+            // it's not annotated with #[repr(C)]; but anyway we promise not
+            // to modify this structure from foreign code).
             mem::transmute(&mut *self)
         };
 
-        // lifetime of pb_data must exceed native_framework_info
+        // The lifetime of `pb_data` must exceed that of
+        // `native_framework_info`.
         let pb_data = &mut vec![];
 
         let native_framework_info =
@@ -275,7 +285,8 @@ impl<'a> SchedulerDriver for MesosSchedulerDriver<'a> {
 
         self.native_ptr_pair = Some(
             unsafe {
-                mesos_c::scheduler_init(callbacks,
+                mesos_c::scheduler_init(
+                    callbacks,
                     native_payload,
                     native_framework_info as *mut mesos_c::ProtobufObj,
                     native_master.as_ptr() as *const i8)
