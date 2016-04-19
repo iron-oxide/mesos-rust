@@ -194,7 +194,7 @@ SchedulerDriverStatus scheduler_sendFrameworkMessage(
 
 SchedulerPtrPair scheduler_init(
     SchedulerCallBacks* callbacks, // Scheduler
-    void* payload,                 // ???
+    void* payload,                 // Opaque Rust scheduler pointer
     ProtobufObj* framework,        // FrameworkInfo
     const char* master);           // std::string& master
 
@@ -240,7 +240,7 @@ ExecutorDriverStatus executor_sendFrameworkMessage(
 
 ExecutorPtrPair executor_init(
     ExecutorCallBacks* callbacks,
-    void* payload);           // ???
+    void* payload);
 
 void executor_destroy(void* driver, void* executor);
 

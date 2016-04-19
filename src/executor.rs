@@ -1,4 +1,4 @@
-use proto;
+use proto::mesos as pb;
 
 /// Callback interface to be implemented by frameworks' executors. Note that
 /// only one callback will be invoked at a time, so it is not recommended that
@@ -17,14 +17,14 @@ pub trait Executor {
     /// to its executors through the ExecutorInfo's `data` field.
     fn registered(
         &self,
-        executor_info: &proto::ExecutorInfo,
-        framework_info: &proto::FrameworkInfo,
-        slave_info: &proto::SlaveInfo);
+        executor_info: &pb::ExecutorInfo,
+        framework_info: &pb::FrameworkInfo,
+        slave_info: &pb::SlaveInfo);
 
     /// Invoked when the executor re-registers with a restarted slave.
     fn reregistered(
         &self,
-        slave_info: &proto::SlaveInfo);
+        slave_info: &pb::SlaveInfo);
 
     /// Invoked when the executor becomes "disconnected" from the slave
     /// (e.g., the slave was restarted due to an upgrade).
@@ -37,7 +37,7 @@ pub trait Executor {
     /// this callback has returned.
     fn launch_task(
         &self,
-        task: &proto::TaskInfo);
+        task: &pb::TaskInfo);
 
     /// Invoked when a task running within this executor has been killed
     /// (via `SchedulerDriver::kill_task`). Note that no status update will
@@ -46,7 +46,7 @@ pub trait Executor {
     /// `ExecutorDriver::send_status_update`.
     fn kill_task(
         &self,
-        task_id: &proto::TaskID);
+        task_id: &pb::TaskID);
 
     /// Invoked when a framework message has arrived for this executor.
     /// These messages are best effort; do not expect a framework message
@@ -89,7 +89,7 @@ pub trait ExecutorDriver {
     /// status update acknowledgements.
     fn send_status_update(
         &self,
-        task_status: &proto::TaskStatus) -> i32;
+        task_status: &pb::TaskStatus) -> i32;
 
     /// Sends a message to the framework scheduler. These messages are best
     /// effort; do not expect a framework message to be retransmitted in

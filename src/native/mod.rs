@@ -14,7 +14,7 @@ mod mesos_c;
 mod tests;
 
 use libc::{c_char, c_int, c_void, size_t};
-use proto;
+use proto::mesos as pb;
 use scheduler::{Scheduler, SchedulerDriver};
 use std::boxed::Box;
 use std::ffi::{CStr, CString};
@@ -26,7 +26,7 @@ use std::str;
 #[derive(Clone)]
 pub struct MesosSchedulerDriver<'a> {
     scheduler: &'a Scheduler,
-    framework_info: &'a proto::FrameworkInfo,
+    framework_info: &'a pb::FrameworkInfo,
     master: String,
     native_ptr_pair: Option<mesos_c::SchedulerPtrPair>,
 }
@@ -35,7 +35,7 @@ impl<'a> MesosSchedulerDriver<'a> {
 
     pub fn new<'d>(
         scheduler: &'d Scheduler,
-        framework_info: &'d proto::FrameworkInfo,
+        framework_info: &'d pb::FrameworkInfo,
         master: String
     ) -> Box<MesosSchedulerDriver<'d>> {
         Box::new(
@@ -66,10 +66,10 @@ impl<'a> MesosSchedulerDriver<'a> {
                 mem::transmute(native_scheduler_driver)
             };
 
-            let framework_id = &mut proto::FrameworkID::new();
+            let framework_id = &mut pb::FrameworkID::new();
             mesos_c::ProtobufObj::merge(native_framework_id, framework_id);
 
-            let master_info = &mut proto::MasterInfo::new();
+            let master_info = &mut pb::MasterInfo::new();
             mesos_c::ProtobufObj::merge(native_master_info, master_info);
 
             driver.scheduler.registered(driver, &framework_id, master_info);
@@ -83,7 +83,7 @@ impl<'a> MesosSchedulerDriver<'a> {
                 mem::transmute(native_scheduler_driver)
             };
 
-            let master_info = &mut proto::MasterInfo::new();
+            let master_info = &mut pb::MasterInfo::new();
             mesos_c::ProtobufObj::merge(native_master_info, master_info);
 
             driver.scheduler.reregistered(driver, master_info);
@@ -96,8 +96,7 @@ impl<'a> MesosSchedulerDriver<'a> {
         ) -> () {
             let driver: &MesosSchedulerDriver = unsafe {
                 mem::transmute(native_scheduler_driver)
-            };
-
+            }; 
             let num_offers = native_num_offers as usize;
 
             let pbs = unsafe {
@@ -109,7 +108,7 @@ impl<'a> MesosSchedulerDriver<'a> {
             let mut offers = vec![];
 
             for mut pb in pbs {
-                let mut offer = proto::Offer::new();
+                let mut offer = pb::Offer::new();
                 mesos_c::ProtobufObj::merge(&mut pb, &mut offer);
                 offers.push(offer);
             }
@@ -125,7 +124,7 @@ impl<'a> MesosSchedulerDriver<'a> {
                 mem::transmute(native_scheduler_driver)
             };
 
-            let task_status = &mut proto::TaskStatus::new();
+            let task_status = &mut pb::TaskStatus::new();
             mesos_c::ProtobufObj::merge(native_task_status, task_status);
 
             driver.scheduler.status_update(driver, task_status);
@@ -149,7 +148,7 @@ impl<'a> MesosSchedulerDriver<'a> {
                 mem::transmute(native_scheduler_driver)
             };
 
-            let offer_id = &mut proto::OfferID::new();
+            let offer_id = &mut pb::OfferID::new();
             mesos_c::ProtobufObj::merge(native_offer_id, offer_id);
 
             driver.scheduler.offer_rescinded(driver, offer_id);
@@ -165,10 +164,10 @@ impl<'a> MesosSchedulerDriver<'a> {
                 mem::transmute(native_scheduler_driver)
             };
 
-            let executor_id = &mut proto::ExecutorID::new();
+            let executor_id = &mut pb::ExecutorID::new();
             mesos_c::ProtobufObj::merge(native_executor_id, executor_id);
 
-            let slave_id = &mut proto::SlaveID::new();
+            let slave_id = &mut pb::SlaveID::new();
             mesos_c::ProtobufObj::merge(native_slave_id, slave_id);
 
             let data_slice = unsafe {
@@ -193,7 +192,7 @@ impl<'a> MesosSchedulerDriver<'a> {
                 mem::transmute(native_scheduler_driver)
             };
 
-            let slave_id = &mut proto::SlaveID::new();
+            let slave_id = &mut pb::SlaveID::new();
             mesos_c::ProtobufObj::merge(native_slave_id, slave_id);
 
             driver.scheduler.slave_lost(driver, slave_id);
@@ -209,10 +208,10 @@ impl<'a> MesosSchedulerDriver<'a> {
                 mem::transmute(native_scheduler_driver)
             };
 
-            let executor_id = &mut proto::ExecutorID::new();
+            let executor_id = &mut pb::ExecutorID::new();
             mesos_c::ProtobufObj::merge(native_executor_id, executor_id);
 
-            let slave_id = &mut proto::SlaveID::new();
+            let slave_id = &mut pb::SlaveID::new();
             mesos_c::ProtobufObj::merge(native_slave_id, slave_id);
 
             let status = native_status as i32;
@@ -312,8 +311,8 @@ impl<'a> SchedulerDriver for MesosSchedulerDriver<'a> {
 
     fn decline_offer(
         &self,
-        offer_id: &proto::OfferID,
-        filters: &proto::Filters) -> i32 {
+        offer_id: &pb::OfferID,
+        filters: &pb::Filters) -> i32 {
 
         assert!(self.native_ptr_pair.is_some());
         let native_driver = self.native_ptr_pair.unwrap().driver;
@@ -340,7 +339,7 @@ impl<'a> SchedulerDriver for MesosSchedulerDriver<'a> {
 
     fn request_resources(
         &self,
-        requests: &Vec<&proto::Request>) -> i32 {
+        requests: &Vec<&pb::Request>) -> i32 {
 
         assert!(self.native_ptr_pair.is_some());
         let native_driver = self.native_ptr_pair.unwrap().driver;
@@ -382,9 +381,9 @@ impl<'a> SchedulerDriver for MesosSchedulerDriver<'a> {
 
     fn launch_tasks(
         &self,
-        offer_id: &proto::OfferID,
-        tasks: &Vec<&proto::TaskInfo>,
-        filters: &proto::Filters) -> i32 {
+        offer_id: &pb::OfferID,
+        tasks: &Vec<&pb::TaskInfo>,
+        filters: &pb::Filters) -> i32 {
 
         assert!(self.native_ptr_pair.is_some());
         let native_driver = self.native_ptr_pair.unwrap().driver;
@@ -449,7 +448,7 @@ impl<'a> SchedulerDriver for MesosSchedulerDriver<'a> {
 
     fn kill_task(
         &self,
-        task_id: &proto::TaskID) -> i32 {
+        task_id: &pb::TaskID) -> i32 {
 
         assert!(self.native_ptr_pair.is_some());
         let native_driver = self.native_ptr_pair.unwrap().driver;
@@ -470,8 +469,8 @@ impl<'a> SchedulerDriver for MesosSchedulerDriver<'a> {
 
     fn send_framework_message(
         &self,
-        executor_id: &proto::ExecutorID,
-        slave_id: &proto::SlaveID,
+        executor_id: &pb::ExecutorID,
+        slave_id: &pb::SlaveID,
         data: &Vec<u8>) -> i32 {
 
         assert!(self.native_ptr_pair.is_some());
