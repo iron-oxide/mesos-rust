@@ -2,7 +2,7 @@ extern crate mesos;
 
 use mesos::scheduler::{Scheduler, SchedulerDriver};
 use mesos::native::MesosSchedulerDriver;
-use mesos::proto;
+use mesos::proto::mesos as pb;
 
 use std::process;
 
@@ -12,8 +12,8 @@ impl Scheduler for MyScheduler {
     fn registered(
         &self,
         _: &SchedulerDriver,
-        framework_id: &proto::FrameworkID,
-        master_info: &proto::MasterInfo) {
+        framework_id: &pb::FrameworkID,
+        master_info: &pb::MasterInfo) {
 
         println!("MyScheduler::registered");
         println!("framework_id: {:?}", framework_id);
@@ -23,7 +23,7 @@ impl Scheduler for MyScheduler {
     fn reregistered(
         &self,
         _: &SchedulerDriver,
-        master_info: &proto::MasterInfo) {
+        master_info: &pb::MasterInfo) {
 
         println!("MyScheduler::reregistered");
         println!("master_info: {:?}", master_info);
@@ -32,7 +32,7 @@ impl Scheduler for MyScheduler {
     fn resource_offers(
         &self,
         driver: &SchedulerDriver,
-        offers: Vec<proto::Offer>) {
+        offers: Vec<pb::Offer>) {
 
         println!("MyScheduler::resource_offers");
         println!("Received [{}] offers", offers.len());
@@ -41,17 +41,17 @@ impl Scheduler for MyScheduler {
         //     println!("Declining  offer: [{:?}]", offer);
         //     driver.decline_offer(
         //         offer.get_id(),
-        //         &proto::Filters::new());
+        //         &pb::Filters::new());
         // }
 
         // Launch a task that consumes all the resources from each offer.
         for offer in offers {
             println!("Launching a task on offer: [{:?}]", offer);
-            let mut task = proto::TaskInfo::new();
+            let mut task = pb::TaskInfo::new();
 
             task.set_name("mesos-rust-task".to_string());
 
-            let mut task_id = proto::TaskID::new();
+            let mut task_id = pb::TaskID::new();
             task_id.set_value(offer.get_id().get_value().to_string());
             task.set_task_id(task_id);
 
@@ -59,7 +59,7 @@ impl Scheduler for MyScheduler {
 
             task.set_resources(offer.clone().take_resources());
 
-            let mut command = proto::CommandInfo::new();
+            let mut command = pb::CommandInfo::new();
             command.set_shell(true);
             command.set_value("env && sleep 10".to_string());
             task.set_command(command);
@@ -67,20 +67,20 @@ impl Scheduler for MyScheduler {
             driver.launch_tasks(
                 offer.get_id(),
                 &vec![&task],
-                &proto::Filters::new());
+                &pb::Filters::new());
         }
     }
 
     fn status_update(
         &self,
         driver: &SchedulerDriver,
-        task_status: &proto::TaskStatus) {
+        task_status: &pb::TaskStatus) {
 
         println!("MyScheduler::status_update");
         println!("task_status: {:?}", task_status);
 
         // Kill all running tasks.
-        if task_status.get_state() == proto::TaskState::TASK_RUNNING {
+        if task_status.get_state() == pb::TaskState::TASK_RUNNING {
             let task_id = task_status.get_task_id();
             println!("Killing task [{:?}]", task_id);
             driver.kill_task(task_id);
@@ -99,7 +99,7 @@ impl Scheduler for MyScheduler {
     fn offer_rescinded(
         &self,
         _: &SchedulerDriver,
-        offer_id: &proto::OfferID) {
+        offer_id: &pb::OfferID) {
 
         println!("MyScheduler::offer_rescinded");
         println!("offer_id: {:?}", offer_id);
@@ -108,8 +108,8 @@ impl Scheduler for MyScheduler {
     fn framework_message(
         &self,
         _: &SchedulerDriver,
-        executor_id: &proto::ExecutorID,
-        slave_id: &proto::SlaveID,
+        executor_id: &pb::ExecutorID,
+        slave_id: &pb::SlaveID,
         data: &String) {
 
         println!("MyScheduler::framework_message");
@@ -121,7 +121,7 @@ impl Scheduler for MyScheduler {
     fn slave_lost(
         &self,
         _: &SchedulerDriver,
-        slave_id: &proto::SlaveID) {
+        slave_id: &pb::SlaveID) {
 
         println!("MyScheduler::slave_lost");
         println!("slave_id: {:?}", slave_id);
@@ -130,8 +130,8 @@ impl Scheduler for MyScheduler {
     fn executor_lost(
         &self,
         _: &SchedulerDriver,
-        executor_id: &proto::ExecutorID,
-        slave_id: &proto::SlaveID,
+        executor_id: &pb::ExecutorID,
+        slave_id: &pb::SlaveID,
         status: i32) {
 
         println!("MyScheduler::executor_lost");
@@ -153,7 +153,7 @@ impl Scheduler for MyScheduler {
 fn main() -> () {
     let scheduler = MyScheduler;
 
-    let mut framework_info = proto::FrameworkInfo::new();
+    let mut framework_info = pb::FrameworkInfo::new();
     framework_info.set_name("mesos-rust-test".to_string());
     framework_info.set_user("root".to_string());
 

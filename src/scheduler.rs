@@ -1,4 +1,4 @@
-use proto;
+use proto::mesos as pb;
 
 /// Callback interface to be implemented by frameworks' schedulers.
 /// Note that only one callback will be invoked at a time, so it is not
@@ -18,8 +18,8 @@ pub trait Scheduler {
     fn registered(
         &self,
         driver: &SchedulerDriver,
-        framework_id: &proto::FrameworkID,
-        master_info: &proto::MasterInfo) -> ();
+        framework_id: &pb::FrameworkID,
+        master_info: &pb::MasterInfo) -> ();
 
     /// Invoked when the scheduler re-registers with a newly elected Mesos
     /// master. This is only called when the scheduler has previously been
@@ -28,7 +28,7 @@ pub trait Scheduler {
     fn reregistered(
         &self,
         driver: &SchedulerDriver,
-        master_info: &proto::MasterInfo) -> ();
+        master_info: &pb::MasterInfo) -> ();
 
     /// Invoked when resources have been offered to this framework. A single
     /// offer will only contain resources from a single slave. Resources
@@ -49,7 +49,7 @@ pub trait Scheduler {
     fn resource_offers(
         &self,
         driver: &SchedulerDriver,
-        offers: Vec<proto::Offer>) -> ();
+        offers: Vec<pb::Offer>) -> ();
 
     /// Invoked when the status of a task has changed (e.g., a slave is lost
     /// and so the task is lost, a task finishes and an executor sends a
@@ -64,7 +64,7 @@ pub trait Scheduler {
     fn status_update(
         &self,
         driver: &SchedulerDriver,
-        task_status: &proto::TaskStatus) -> ();
+        task_status: &pb::TaskStatus) -> ();
 
     /// Invoked when the scheduler becomes "disconnected" from the master
     /// (e.g., the master fails and another is taking over).
@@ -80,7 +80,7 @@ pub trait Scheduler {
     fn offer_rescinded(
         &self,
         driver: &SchedulerDriver,
-        offer_id: &proto::OfferID) -> ();
+        offer_id: &pb::OfferID) -> ();
 
     /// Invoked when a slave has been determined unreachable (e.g., machine
     /// failure, network partition).  Most frameworks will need to reschedule
@@ -88,15 +88,15 @@ pub trait Scheduler {
     fn slave_lost(
         &self,
         driver: &SchedulerDriver,
-        slave_id: &proto::SlaveID) -> ();
+        slave_id: &pb::SlaveID) -> ();
 
     /// Invoked when an executor has exited/terminated. Note that any tasks
     /// running will have TASK_LOST status updates automagically generated.
     fn executor_lost(
         &self,
         driver: &SchedulerDriver,
-        executor_id: &proto::ExecutorID,
-        slave_id: &proto::SlaveID,
+        executor_id: &pb::ExecutorID,
+        slave_id: &pb::SlaveID,
         status: i32) -> ();
 
     /// Invoked when an executor sends a message. These messages are best
@@ -105,8 +105,8 @@ pub trait Scheduler {
     fn framework_message(
         &self,
         driver: &SchedulerDriver,
-        executor_id: &proto::ExecutorID,
-        slave_id: &proto::SlaveID,
+        executor_id: &pb::ExecutorID,
+        slave_id: &pb::SlaveID,
         data: &String) -> ();
 
     /// Invoked when there is an unrecoverable error in the scheduler or
@@ -143,7 +143,7 @@ pub trait SchedulerDriver {
     /// `Scheduler::resource_offers` callback, asynchronously.
     fn request_resources(
         &self,
-        requests: &Vec<&proto::Request>) -> i32;
+        requests: &Vec<&pb::Request>) -> i32;
 
     /// Declines an offer in its entirety and applies the specified filters on
     /// the resources (see mesos.proto for a description of Filters). Note
@@ -151,8 +151,8 @@ pub trait SchedulerDriver {
     /// within the `Scheduler::resource_offers` callback.
     fn decline_offer(
         &self,
-        offer_id: &proto::OfferID,
-        filters: &proto::Filters) -> i32;
+        offer_id: &pb::OfferID,
+        filters: &pb::Filters) -> i32;
 
     /// Launches the given set of tasks. Note that all offers must belong to
     /// the same slave. Any resources remaining (i.e., not used by the tasks
@@ -164,9 +164,9 @@ pub trait SchedulerDriver {
     /// offers in their entirety (see `decline_offer`).
     fn launch_tasks(
         &self,
-        offer_id: &proto::OfferID,
-        tasks: &Vec<&proto::TaskInfo>,
-        filters: &proto::Filters) -> i32;
+        offer_id: &pb::OfferID,
+        tasks: &Vec<&pb::TaskInfo>,
+        filters: &pb::Filters) -> i32;
 
     /// Removes all filters, previously set by the framework (via
     /// `launch_tasks`). This enables the framework to receive offers from
@@ -180,14 +180,14 @@ pub trait SchedulerDriver {
     /// (these semantics may be changed in the future).
     fn kill_task(
         &self,
-        task_id: &proto::TaskID) -> i32;
+        task_id: &pb::TaskID) -> i32;
 
     /// Sends a message from the framework to one of its executors. These
     /// messages are best effort; do not expect a framework message to be
     /// retransmitted in any reliable fashion.
     fn send_framework_message(
         &self,
-        executor_id: &proto::ExecutorID,
-        slave_id: &proto::SlaveID,
+        executor_id: &pb::ExecutorID,
+        slave_id: &pb::SlaveID,
         data: &Vec<u8>) -> i32;
 }
